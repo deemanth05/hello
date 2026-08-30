@@ -11,3 +11,4 @@ twilio>=9.0.0
 loguru>=0.7.2
 numpy>=1.26.0
 sounddevice>=0.4.6
+pydantic-settings>=2.2.0

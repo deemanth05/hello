@@ -1,0 +1,24 @@
+/.agents
+*.py[cod]
+*$py.class
+*.so
+/.venv
+# Environment Variables & Secrets
+.env
+
+
+# SQLite Database
+*.db
+*.sqlite3
+
+
+# Audio caches / models
+piper_models/
+whisper_models/
+
+
+# IDE
+.vscode/
+.idea/
+
+

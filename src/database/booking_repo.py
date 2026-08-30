@@ -5,30 +5,36 @@ from src.database.db import get_db_cursor
 from loguru import logger
 
 def search_products(query: str = "") -> List[Dict[str, Any]]:
-    """Search for products by name or category (case-insensitive substring match)."""
-
+    """Search products where all words in query match product name or category."""
     with get_db_cursor() as cursor:
-        if not query.strip():
+        words = query.strip().split()
+        if not words:
             cursor.execute("SELECT id, name, category, price, unit, stock_quantity FROM products WHERE stock_quantity > 0 LIMIT 15")
         else:
-            cursor.execute("""
-                SELECT id, name, category, price, unit, stock_quantity 
-                FROM products 
-                WHERE (LOWER(name) LIKE LOWER(?) OR LOWER(category) LIKE LOWER(?)) 
-                  AND stock_quantity > 0
-            """, (f"%{query.strip()}%", f"%{query.strip()}%"))
+            # Build dynamic WHERE clause: (name LIKE %w1% OR category LIKE %w1%) AND (name LIKE %w2% OR category LIKE %w2%)
+            conditions = " AND ".join(["(LOWER(name) LIKE ? OR LOWER(category) LIKE ?)" for _ in words])
+            params = []
+            for w in words:
+                params.extend([f"%{w.lower()}%", f"%{w.lower()}%"])
+            
+            cursor.execute(f"SELECT id, name, category, price, unit, stock_quantity FROM products WHERE {conditions} AND stock_quantity > 0", params)
         
         return [dict(row) for row in cursor.fetchall()]
-
-            
 def check_item_stock(product_name: str, requested_quantity: int = 1) -> Dict[str, Any]:
-    """Check if an item is available in requested quantity."""
+    """Check stock by matching product keywords."""
     with get_db_cursor() as cursor:
-        cursor.execute("SELECT id, name, price, unit, stock_quantity FROM products WHERE LOWER(name) LIKE LOWER(?)", (f"%{product_name.strip()}%",))
+        words = product_name.strip().split()
+        if not words:
+            return {"in_stock": False, "reason": "No product specified."}
+        
+        conditions = " AND ".join(["LOWER(name) LIKE ?" for _ in words])
+        params = [f"%{w.lower()}%" for w in words]
+        
+        cursor.execute(f"SELECT id, name, price, unit, stock_quantity FROM products WHERE {conditions}", params)
         item = cursor.fetchone()
         
         if not item:
-            return {"in_stock": False, "reason": f"Item '{product_name}' was not found in catalog."}
+            return {"in_stock": False, "reason": f"Item matching '{product_name}' was not found in catalog."}
         
         if item["stock_quantity"] < requested_quantity:
             return {

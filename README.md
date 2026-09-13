@@ -28,6 +28,7 @@ The service is configured for zero-overhead deployment on **Render**:
 
 | Document | Description |
 | :--- | :--- |
+| **[Getting Started & Setup Guide](docs/GETTING_STARTED.md)** | Step-by-step clone, setup, environment configuration, and run instructions for new developers |
 | **[System Architecture](docs/ARCHITECTURE.md)** | Technical design, Dual-Mode lazy loading, audio transcoding pipelines (8kHz $\mu$-law $\leftrightarrow$ 16/24kHz PCM), and sequence diagrams |
 | **[API Reference](docs/API_REFERENCE.md)** | Full specification of REST endpoints (`/`, `/health`, `/api/orders`, `/api/simulate/call`), Twilio webhook, and WebSocket streaming events |
 | **[Database & Models](docs/DATABASE.md)** | SQLite WAL schema, table definitions, pre-seeded customer profiles, phone normalization, and semantic grocery synonyms |
@@ -62,24 +63,36 @@ The service is configured for zero-overhead deployment on **Render**:
 
 ## 🚀 Quick Start
 
-### 1. Installation
+> For a complete, step-by-step walkthrough, see the **[Getting Started Guide](docs/GETTING_STARTED.md)**.
 
-#### Cloud / Lightweight Setup (Recommended for Cloud Hosting & Gemini Live)
+### 1. Clone & Setup
+
+```bash
+git clone https://github.com/deemanth05/hello.git
+cd hello
+```
+
+Create and activate a virtual environment:
 ```powershell
+# Windows (PowerShell)
 python -m venv .venv
 .\.venv\Scripts\activate
-pip install -r requirements.txt
+
+# Linux / macOS (Bash)
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
-#### Local Edge Inference Stack (Whisper + Piper TTS)
-If running fully offline with local neural models:
-```powershell
-pip install -r requirements-local.txt
-```
-Ensure [Ollama](https://ollama.com/) is installed and running:
-```bash
-ollama run gemma3:latest
-```
+Install dependencies:
+- **Cloud-Native Mode (Recommended - Gemini 2.5 Live, ~90 MB RAM)**:
+  ```bash
+  pip install -r requirements.txt
+  ```
+- **Local AI Mode (Offline Faster-Whisper + Piper TTS)**:
+  ```bash
+  pip install -r requirements-local.txt
+  ```
+  *(Ensure [Ollama](https://ollama.com/) is running: `ollama run gemma3:latest`)*
 
 ### 2. Environment Configuration
 Copy `.env.example` to `.env` and fill in credentials:
@@ -167,6 +180,7 @@ hello/
 ├── test_e2e_call.py               # End-to-end WebSocket client call simulation
 │
 ├── docs/                          # Comprehensive Technical Documentation
+│   ├── GETTING_STARTED.md         # Clone, setup & run guide for new developers
 │   ├── ARCHITECTURE.md            # System architecture, Dual-Mode lazy loading & audio transcoding
 │   ├── API_REFERENCE.md           # REST endpoints, Twilio webhook & WebSocket protocol reference
 │   ├── DATABASE.md                # Schema, models, pre-seeded customers & synonym mappings

@@ -155,7 +155,7 @@ Atomically validates stock for all items, creates the order in the `orders` tabl
   - `customer_phone` *(string, optional)*: Customer phone number. Automatically populated from incoming caller ID if omitted.
 - **Handler**: `create_store_order(...)` in [`src/database/booking_repo.py`](file:///c:/Users/deema/Desktop/hello/src/database/booking_repo.py).
 - **Business Logic**:
-  - Delivery Fee: Free if `subtotal >= 500.0` (`settings.FREE_DELIVERY_THRESHOLD`), otherwise `30.0` (`settings.DELIVERY_FEE`). For `"pickup"`, fee is always `0.0`.
+  - Delivery Fee: Free if `subtotal >= 800.0` (`settings.FREE_DELIVERY_THRESHOLD`), otherwise `30.0` (`settings.DELIVERY_FEE`). For `"pickup"`, fee is always `0.0`.
   - ETA Window: Calculated dynamically as `30 to 40 minutes (approx <HH:MM AM/PM>)`.
   - Stock Deductions: Decrements `stock_quantity` by ordered quantity for each item inside a single atomic SQLite transaction.
 - **Return (Success)**:

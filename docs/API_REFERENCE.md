@@ -1,10 +1,25 @@
 # API & Telephony Protocol Reference
 
-This document provides a comprehensive specification of all HTTP endpoints and WebSocket streaming protocols exposed by the DMart Express Voice-AI Telephony Server.
+This document provides a comprehensive specification of all HTTP endpoints and WebSocket streaming protocols exposed by the DMart Express Voice-AI Telephony Server (`src/server/telephony_server.py`).
 
 ---
 
-## 1. REST Endpoints
+## 1. Web Dashboard & Management
+
+### `GET /`
+Serves the web-based store management dashboard and interactive browser call simulator.
+
+- **Request Method**: `GET`
+- **Response Format**: `text/html; charset=utf-8` (`src/server/templates/index.html`)
+- **Features**:
+  - Live orders feed and order status monitoring.
+  - Registered customer directory and delivery addresses.
+  - Supermarket grocery catalog with stock counts and prices.
+  - Interactive in-browser call simulator allowing voice testing directly via web microphone.
+
+---
+
+## 2. REST Endpoints
 
 ### `GET /health`
 Verifies server health, running store configuration, and the active LLM backend.
@@ -63,6 +78,34 @@ Searches store inventory by name, category, or semantic keyword.
       "price": 54.0,
       "unit": "1 Liter",
       "stock_quantity": 50
+    }
+  ]
+}
+```
+
+---
+
+### `GET /api/orders`
+Retrieves a list of recent customer orders placed through the telephony system or web interface.
+
+- **Request Method**: `GET`
+- **Response Format**: `application/json`
+- **Response Example**:
+```json
+{
+  "orders": [
+    {
+      "id": 4,
+      "order_id": "DMART-A045",
+      "customer_name": "Vikram Rao",
+      "customer_phone": "+919999888877",
+      "delivery_type": "delivery",
+      "delivery_address": "Flat 101, Palm Grove Apartments, Indiranagar, Bangalore",
+      "total_amount": 443.0,
+      "estimated_delivery_time": "30 to 40 minutes (approx 9:45 PM)",
+      "status": "CONFIRMED",
+      "created_at": "2026-09-10 21:10:50",
+      "items": "Amul Gold Milk x1, Britannia Bread x1"
     }
   ]
 }
@@ -131,7 +174,33 @@ Manually registers or updates a customer profile.
 
 ---
 
-## 2. Twilio Telephony Webhook
+### `POST /api/simulate/call`
+Simulates the start of a phone call for testing through the web dashboard without placing a telephone call.
+
+- **Request Method**: `POST`
+- **Request Body**:
+```json
+{
+  "caller_phone": "+919876543210"
+}
+```
+- **Response Format**: `application/json`
+- **Response Example**:
+```json
+{
+  "caller_phone": "+919876543210",
+  "customer": {
+    "name": "Rahul Sharma",
+    "address": "Flat 402, Sunshine Heights, Mumbai"
+  },
+  "greeting_text": "ನಮಸ್ಕಾರ Rahul Sharma, ಡಿಮಾರ್ಟ್ ಎಕ್ಸ್‌ಪ್ರೆಸ್‌ಗೆ ಸ್ವಾಗತ! ನಿಮಗೆ ಇಂದು ಯಾವ ದಿನಸಿ ಸಾಮಗ್ರಿಗಳು ಬೇಕು?",
+  "audio_base64": "UklGRi..."
+}
+```
+
+---
+
+## 3. Twilio Telephony Webhook
 
 ### `POST|GET /voice/incoming`
 Webhook endpoint called by Twilio when an inbound phone call arrives at your registered Twilio phone number.
@@ -139,15 +208,15 @@ Webhook endpoint called by Twilio when an inbound phone call arrives at your reg
 - **Supported Methods**: `POST` (standard Twilio production), `GET` (browser test)
 - **Twilio Form Data Parameters**:
   - `From`: Caller phone number in E.164 format (e.g. `+919876543210`).
-  - `To`: Twilio virtual phone number.
+  - `To`: Twilio virtual phone number (e.g. `+17744930623`).
   - `CallSid`: Unique identifier for the Twilio call session.
-- **Response Type**: `application/xml` (TwiML)
+- **Response Type**: `text/xml; charset=utf-8` (TwiML)
 - **Response Structure**:
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Connect>
-        <Stream url="wss://your-domain.ngrok-free.app/voice/stream">
+        <Stream url="wss://your-domain.onrender.com/voice/stream">
             <Parameter name="caller" value="+919876543210" />
         </Stream>
     </Connect>
@@ -155,11 +224,11 @@ Webhook endpoint called by Twilio when an inbound phone call arrives at your reg
 ```
 
 > [!NOTE]
-> The server inspects request headers (`Host` and `X-Forwarded-Proto`) to automatically negotiate between insecure `ws://` and TLS-secured `wss://` URLs for Twilio compliance.
+> The server automatically inspects `X-Forwarded-Proto`, `Host`, and URL scheme to ensure all public deployments (`*.onrender.com`, `*.trycloudflare.com`, `*.ngrok-free.app`) negotiate secure TLS WebSocket (`wss://`) URLs for Twilio compliance.
 
 ---
 
-## 3. Bi-Directional WebSocket Streaming (`/voice/stream`)
+## 4. Bi-Directional WebSocket Streaming (`/voice/stream`)
 
 Twilio connects to `/voice/stream` over WebSocket to exchange bidirectional real-time audio.
 

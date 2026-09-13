@@ -118,19 +118,31 @@ When an inbound call arrives at `/voice/incoming`, Twilio transmits caller metad
 
 ---
 
-## 5. Dual-Mode Architecture
+## 5. Dual-Mode Architecture & Cloud-Native Decoupling
 
-The project can switch dynamically between two backends based on environment configuration:
+The telephony server dynamically selects its execution path based on whether `GEMINI_API_KEY` is present:
 
-### A. 100% Local Inference Mode (Default)
-- **Zero API Costs**: No external subscriptions or network latency dependencies.
+### A. 100% Local Inference Mode (Offline Laptop Mode)
+- **Zero API Costs**: Runs entirely on consumer hardware with no external network dependencies.
+- **Lazy Loading**: If `GEMINI_API_KEY` is empty, the server imports `src.pipeline.bot_pipeline` and loads models into memory at startup.
 - **Components**:
   - **STT**: `faster-whisper` (multilingual `base`, int8 CPU/GPU with Silero VAD).
   - **LLM**: Local `ollama` instance (`gemma3:latest` or `qwen2.5:7b`).
-  - **TTS**: `piper-tts` (`en_US-lessac-medium` ONNX model).
-- **Offline Capable**: Runs completely locally on consumer hardware.
+  - **TTS**: `piper-tts` (`en_US-lessac-medium` ONNX model with phonetic Kannada transliteration).
+- **RAM Footprint**: ~4 GB – 8 GB (due to ONNX acoustic models, Whisper weights, and Ollama model context).
 
-### B. Gemini 2.5 Multimodal Live Mode (Cloud Native)
-- **Sub-500ms Turnaround**: Native Speech-to-Speech bi-directional WebSocket connection via `google-genai` SDK.
-- **Barge-in Support**: Gemini native acoustic barge-in detects caller interruption and flushes the Twilio audio queue automatically.
-- **Activated By**: Specifying `GEMINI_API_KEY` in `.env`.
+### B. Gemini 2.5 Multimodal Live Mode (Cloud Native on Render)
+- **Ultra-Lightweight (~90 MB – 110 MB RAM)**: When `GEMINI_API_KEY` is configured (e.g. on Render Free Tier), heavy local libraries (`faster-whisper`, `piper-tts`, `ollama`) are **never imported or loaded**.
+- **Direct Speech-to-Speech**: Inbound 8kHz $\mu$-law audio is transcoded to 16kHz PCM and streamed directly to Gemini Live over a persistent WebSocket session (`gemini-2.5-flash-native-audio-latest`).
+- **Sub-Second Turnaround**: The AI begins producing 24kHz synthesized audio bytes before the entire sentence has finished generating.
+- **Acoustic Barge-in**: When the caller speaks while the bot is talking, Gemini emits an `interrupted` event and the bridge immediately sends an empty `{"event": "clear"}` frame to Twilio to flush the audio buffer.
+- **Native Tool Calling**: Gemini invokes `search_catalog`, `check_stock`, `place_order`, and `register_caller` using JSON declarations; results are queried against SQLite and returned via `session.send_tool_response()`.
+
+---
+
+## 6. Web Dashboard Architecture
+
+The server hosts a lightweight Jinja2-rendered store dashboard on `GET /`:
+- **Order Tracking**: Queries `orders` and `order_items` to display real-time order history, customer names, rupee amounts, and dynamic ETAs.
+- **Customer Directory**: Displays registered phone numbers and delivery addresses.
+- **Interactive Web Simulator**: Enables voice testing via HTML5 Web Audio API directly in the browser without placing a telephone call.

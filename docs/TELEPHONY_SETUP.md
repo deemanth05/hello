@@ -1,93 +1,109 @@
-# Telephony Integration & Deployment Guide (Twilio & Cloudflare/ngrok)
+# Telephony Integration & Deployment Guide (Twilio, Render & Cloudflare)
 
-This guide walks you through connecting your local or cloud DMart Voice-AI server to a live telephone number via **Twilio Voice Webhooks and Bi-directional Media Streams**.
+This guide walks you through connecting your DMart Voice-AI server to a live telephone number via **Twilio Voice Webhooks and Bi-directional Media Streams**.
 
 ---
 
 ## 1. Prerequisites
 
-1. An active [Twilio Account](https://www.twilio.com/).
-2. A purchased Twilio phone number (US or International).
-3. A public HTTPS/WSS tunnel:
-   - **Cloudflare Tunnel** (`cloudflared.exe` included in this repository), OR
-   - **ngrok** (`ngrok http 8765`).
+1. An active [Twilio Account](https://www.twilio.com/) (Trial or Paid).
+2. A purchased Twilio phone number (e.g. `+17744930623`).
+3. Either:
+   - **Cloud Hosting on Render** (`https://<app>.onrender.com`), OR
+   - **Local Tunnel**: Cloudflare Tunnel (`cloudflared.exe` included) or ngrok.
 
 ---
 
-## 2. Exposing the Local Server to the Public Internet
+## 2. Telephony Hosting Options
 
-Twilio requires a public HTTPS/WSS endpoint to route call media streams.
+### Option A: 24/7 Cloud Hosting on Render (Recommended)
+With Render cloud deployment, the server runs permanently on the web with native SSL (`https://` and `wss://`). No laptop, ngrok, or Cloudflare tunnel is required:
+- Public Voice Webhook: `https://<your-service>.onrender.com/voice/incoming`
+- WebSocket Stream: `wss://<your-service>.onrender.com/voice/stream`
 
-### Option A: Using the Bundled Cloudflare Tunnel (Free, No Signup Required)
-
-The workspace includes `cloudflared.exe`. Run the following command in PowerShell:
-
+### Option B: Local Cloudflare Tunnel (`cloudflared.exe`)
+For local laptop testing:
 ```powershell
 .\cloudflared.exe tunnel --url http://localhost:8765
 ```
-
-Cloudflare will generate a public URL such as:
-```
-https://random-words-123.trycloudflare.com
-```
-
-### Option B: Using ngrok
-
-If you have ngrok installed:
-
-```powershell
-ngrok http 8765
-```
-
-Note the forwarded HTTPS domain (e.g., `https://abc123.ngrok-free.app`).
+Cloudflare outputs a public domain (e.g. `https://random-words.trycloudflare.com`).
 
 ---
 
 ## 3. Configuring Twilio Voice Webhook
 
-### Method 1: Automated Configuration Script
-The project provides `scripts/setup_twilio_webhook.py` to configure your Twilio phone number programmatically via the Twilio REST API.
+### Method 1: Automated Configuration Script (Fastest)
+The repository provides `scripts/setup_twilio_webhook.py` to configure your Twilio phone number programmatically via the Twilio REST API:
 
-1. Ensure your `.env` contains:
-```env
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-TWILIO_AUTH_TOKEN=your_auth_token_here
-```
-
-2. Run the update script:
 ```powershell
-.venv\Scripts\python.exe scripts/setup_twilio_webhook.py https://random-words-123.trycloudflare.com/voice/incoming
+.venv\Scripts\python.exe scripts/setup_twilio_webhook.py https://<YOUR_DOMAIN>/voice/incoming
 ```
 
-The script will:
-- Discover all numbers on your Twilio account.
-- Update each number's `VoiceUrl` to `https://<DOMAIN>/voice/incoming` with HTTP `POST`.
-
----
+The script will automatically discover all active phone numbers on your Twilio account and update each number's `VoiceUrl` to `https://<YOUR_DOMAIN>/voice/incoming` (HTTP POST).
 
 ### Method 2: Manual Twilio Console Configuration
-
 1. Log in to the [Twilio Console](https://console.twilio.com/).
 2. Navigate to **Phone Numbers** $\to$ **Manage** $\to$ **Active Numbers**.
-3. Click on your phone number.
-4. Scroll down to the **Voice Configuration** section:
+3. Click on your active phone number.
+4. Scroll down to **Voice Configuration**:
    - **A CALL COMES IN**: Select **Webhook**.
-   - **URL**: Paste `https://<YOUR_TUNNEL_DOMAIN>/voice/incoming`.
+   - **URL**: Paste `https://<YOUR_DOMAIN>/voice/incoming`.
    - **HTTP METHOD**: Select `HTTP POST`.
 5. Click **Save Configuration**.
 
 ---
 
-## 4. How the Phone Call Operates
+## 4. ⚠️ Critical Twilio Free Trial Requirements
 
-1. **Incoming Ring**: You dial your Twilio phone number from any mobile or landline handset.
-2. **Webhook Request**: Twilio sends an HTTP POST request to `https://<YOUR_TUNNEL_DOMAIN>/voice/incoming`.
-3. **TwiML Handshake**: The server looks up your phone number in SQLite and replies with TwiML `<Connect><Stream url="wss://<DOMAIN>/voice/stream">`.
+If your Twilio account is in **Free Trial Mode**, Twilio strictly enforces the following:
+
+### 1. Verified Caller ID Requirement
+Twilio blocks inbound calls from any number that has not been explicitly verified:
+- **How to Verify**: Go to [**Twilio Verified Caller IDs**](https://console.twilio.com/us1/develop/phone-numbers/manage/verified-caller-ids) and verify your mobile number via SMS OTP.
+- **Automated Verification Call Script**:
+  ```powershell
+  .venv\Scripts\python.exe scripts/verify_phone_in_twilio.py +91XXXXXXXXXX
+  ```
+  Twilio will place a verification call to the handset; type the displayed 6-digit code on the phone dialpad.
+
+### 2. International Dialing Format
+The Twilio phone number is a US number (`+1...`).
+- When dialing from India, always include the `+` sign (long-press `0` on mobile dialpad).
+- Ensure your mobile SIM card has international outgoing (ISD) talktime or pack active.
+
+---
+
+## 5. Telephony Management Scripts Suite (`scripts/`)
+
+| Script | Purpose |
+| :--- | :--- |
+| `scripts/setup_twilio_webhook.py <URL>` | Updates Twilio phone number webhook to the given URL |
+| `scripts/add_customer.py <PHONE> <NAME> <ADDR>` | Registers new test customer in SQLite (`--list` to view) |
+| `scripts/check_numbers.py` | Queries Twilio REST API for active numbers & current voice URLs |
+| `scripts/check_verified_callers.py` | Lists all phone numbers verified to place calls to trial numbers |
+| `scripts/verify_phone_in_twilio.py <PHONE>` | Triggers outbound Twilio phone call to verify a new caller ID |
+| `scripts/check_twilio_logs.py` | Fetches recent incoming call records and statuses from Twilio |
+
+---
+
+## 6. How the Phone Call Operates
+
+1. **Incoming Ring**: You dial your Twilio phone number from any verified handset.
+2. **Webhook Request**: Twilio sends an HTTP POST to `/voice/incoming`.
+3. **TwiML Handshake**: The server looks up the caller in SQLite and returns standard TwiML:
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <Response>
+       <Connect>
+           <Stream url="wss://<YOUR_DOMAIN>/voice/stream">
+               <Parameter name="caller" value="+919876543210" />
+           </Stream>
+       </Connect>
+   </Response>
+   ```
 4. **WebSocket Media Stream**: Twilio opens a bi-directional WebSocket connection to `/voice/stream`.
 5. **Conversational Turn**:
-   - The AI welcomes you in Kannada.
-   - When you speak, audio is transcoded from 8kHz $\mu$-law to 16kHz linear PCM.
-   - Faster-Whisper transcribes your voice.
-   - Gemma 3 / Qwen 2.5 executes grocery tools (catalog search, stock check, order placement).
-   - Piper TTS generates natural Kannada speech.
-   - Audio is transcoded to 8kHz $\mu$-law and streamed back to your handset with zero stutter.
+   - The AI welcomes the caller in Kannada by name.
+   - Caller audio is streamed in 20ms G.711 $\mu$-law frames.
+   - The AI resolves items, searches the catalog, checks stock, and commits orders with dynamic ETAs.
+   - Audio is streamed back seamlessly to the caller's phone speaker.

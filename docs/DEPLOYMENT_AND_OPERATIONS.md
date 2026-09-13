@@ -75,6 +75,44 @@ sudo systemctl start dmart-voice
 
 ---
 
+### Cloud Hosting on Render (Zero-Friction Cloud Deployment)
+
+The repository is configured for 1-click cloud deployment on [Render](https://render.com) using **Gemini 2.5 Live Multimodal Speech-to-Speech**:
+
+#### 1. Deployment Blueprint (`render.yaml`)
+```yaml
+services:
+  - type: web
+    name: dmart-voice-ai
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.server.telephony_server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: GEMINI_API_KEY
+        sync: false
+```
+
+#### 2. Procfile
+```procfile
+web: uvicorn src.server.telephony_server:app --host 0.0.0.0 --port $PORT
+```
+
+#### 3. Why Gemini Live is Ideal on Render Free Tier
+- **Memory Footprint**: Uses only **~90 MB – 110 MB RAM** on Render, leaving ample headroom under the 512MB free limit. Local Ollama + Gemma 3 requires 4GB+ RAM and is killed by Linux OOM.
+- **Port Binding**: Automatically reads `$PORT` provided by Render via `src/config.py`:
+  ```python
+  SERVER_PORT: int = int(os.getenv("PORT", "8765"))
+  ```
+- **Lightweight Dependencies**: `requirements.txt` contains only cloud production dependencies. Heavy local-only packages (`piper-tts`, `faster-whisper`, `sounddevice`) are kept in `requirements-local.txt` to prevent slow or failing C++ builds on Linux.
+
+#### 4. Handling Render Free Tier Sleep (Cold Starts)
+Render Free web services spin down after 15 minutes of inactivity. When a phone call arrives while asleep, container wake-up can take 30–45s, causing Twilio to time out.
+- **Permanent Solution**: Use a free uptime pinger ([UptimeRobot](https://uptimerobot.com) or [Cron-Job.org](https://cron-job.org)) to send an HTTP GET request to `https://<your-service>.onrender.com/health` (or root `/`) every **5 to 10 minutes**. This keeps the container permanently warm 24/7 with zero cost.
+
+---
+
 ## 3. Environment Variables Reference
 
 | Variable | Type | Default Value | Description |
@@ -84,14 +122,14 @@ sudo systemctl start dmart-voice
 | `MINIMUM_ORDER_VALUE`| Float | `250.0` | Minimum purchase threshold (INR ₹) |
 | `DELIVERY_FEE` | Float | `30.0` | Delivery charge (INR ₹) |
 | `FREE_DELIVERY_THRESHOLD`| Float | `800.0` | Minimum spend for free delivery |
-| `OLLAMA_HOST` | String | `http://localhost:11434` | Ollama API address |
-| `OLLAMA_MODEL` | String | `gemma3:latest` | Local LLM model name |
+| `OLLAMA_HOST` | String | `http://localhost:11434` | Ollama API address (Local mode) |
+| `OLLAMA_MODEL` | String | `gemma3:latest` | Local LLM model name (`gemma3:latest` or `qwen2.5:7b`) |
 | `LANGUAGE` | String | `kn` | Primary language code (`kn` for Kannada) |
 | `STT_MODEL_SIZE` | String | `base` | Faster-Whisper model (`tiny`, `base`, `small`) |
 | `STT_LANGUAGE` | String | `kn` | STT language code |
 | `SERVER_HOST` | String | `0.0.0.0` | FastAPI server bind address |
-| `SERVER_PORT` | Integer| `8765` | Server port |
-| `GEMINI_API_KEY` | String | `""` | Optional: activates Gemini 2.5 Live bridge |
+| `PORT` / `SERVER_PORT`| Integer| `8765` | Server port (auto-binds to `$PORT` on Render) |
+| `GEMINI_API_KEY` | String | `""` | Gemini API key. Activates cloud Gemini 2.5 Live bridge |
 | `TWILIO_ACCOUNT_SID` | String | `""` | Twilio Account SID for setup script |
 | `TWILIO_AUTH_TOKEN` | String | `""` | Twilio Auth Token for setup script |
 

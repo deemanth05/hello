@@ -103,7 +103,18 @@ Measures time-to-first-token (TTFT) and total generation latency for Ollama mode
 ```
 
 ### 10. End-to-End WebSocket Simulation (`test_e2e_call.py`)
-Simulates a live Twilio WebSocket client sending 20ms $\mu$-law packets and verifying inbound/outbound streaming turns.
+Simulates a live Twilio WebSocket phone call over the internet, transmitting synthesized 20ms $\mu$-law audio packets, verifying inbound greeting reception, streaming caller speech turns, triggering tool calls against SQLite, and measuring time-to-first-audio-byte (TTFB).
+
 ```powershell
-.venv\Scripts\python.exe test_e2e_call.py
+# 1. Test against local telephony server (default)
+.venv\Scripts\python.exe test_e2e_call.py ws://localhost:8765/voice/stream +917676219923
+
+# 2. Test against live Render cloud deployment
+.venv\Scripts\python.exe test_e2e_call.py wss://hello-8ct1.onrender.com/voice/stream +917676219923
+
+# 3. Test against Cloudflare Tunnel
+.venv\Scripts\python.exe test_e2e_call.py wss://<subdomain>.trycloudflare.com/voice/stream +917676219923
 ```
+Parameters:
+- `arg 1` *(optional)*: Target WebSocket URL (defaults to `ws://localhost:8765/voice/stream`).
+- `arg 2` *(optional)*: Caller phone number to simulate (defaults to `+919008474173`).

@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMart Express - Voice-AI Telephony Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Kannada:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #059669;
+            --primary-dark: #047857;
+            --primary-light: #d1fae5;
+            --surface: #ffffff;
+            --bg: #f3f4f6;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --card-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+            --phone-bg: #1e293b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', 'Noto Sans Kannada', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: #ffffff;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand-logo {
+            background: var(--primary);
+            color: white;
+            font-weight: 800;
+            font-size: 1.25rem;
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .brand h1 { font-size: 1.25rem; font-weight: 700; color: #065f46; }
+        .brand p { font-size: 0.8rem; color: var(--text-muted); }
+
+        .system-badges {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .badge-green { background: #d1fae5; color: #065f46; }
+        .badge-blue { background: #dbeafe; color: #1e40af; }
+        .badge-amber { background: #fef3c7; color: #92400e; }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        nav.tabs {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 1rem 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1300px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        /* Simulator Layout */
+        .simulator-grid {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .simulator-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Virtual Phone Box */
+        .phone-card {
+            background: white;
+            border-radius: 24px;
+            padding: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+            border: 1px solid var(--border);
+        }
+
+        .phone-header {
+            text-align: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .phone-notch {
+            width: 120px;
+            height: 18px;
+            background: #e2e8f0;
+            border-radius: 999px;
+            margin: 0 auto 1rem;
+        }
+
+        .caller-select-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+            display: block;
+            text-align: left;
+        }
+
+        select.phone-input, input.phone-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+            background: #f8fafc;
+            color: var(--text-main);
+            outline: none;
+        }
+
+        select.phone-input:focus, input.phone-input:focus {
+            border-color: var(--primary);
+            background: white;
+        }
+
+        .call-controls {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.85rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .btn-call {
+            background: #10b981;
+            color: white;
+        }
+        .btn-call:hover { background: #059669; }
+
+        .btn-hangup {
+            background: #ef4444;
+            color: white;
+            display: none;
+        }
+        .btn-hangup:hover { background: #dc2626; }
+
+        .call-status-indicator {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: #f1f5f9;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .call-status-indicator.active {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        /* Chat Area */
+        .chat-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+        }
+
+        .chat-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header h3 { font-size: 1.05rem; font-weight: 700; }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .msg-bubble {
+            max-width: 80%;
+            padding: 0.85rem 1.15rem;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            position: relative;
+        }
+
+        .msg-ai {
+            align-self: flex-start;
+            background: #f0fdf4;
+            color: #064e3b;
+            border: 1px solid #bbf7d0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .msg-user {
+            align-self: flex-end;
+            background: #2563eb;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-author {
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+            opacity: 0.8;
+        }
+
+        .msg-play-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0.2rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .suggestion-chips {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding: 0.5rem 1.5rem;
+            background: #fafafa;
+            border-top: 1px solid var(--border);
+        }
+
+        .chip {
+            white-space: nowrap;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 999px;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .chip:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .chat-input-row {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem 1.25rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        .chat-input:focus { border-color: var(--primary); }
+
+        .btn-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+        }
+
+        .btn-mic { background: #f1f5f9; color: #475569; }
+        .btn-mic.recording { background: #fee2e2; color: #dc2626; animation: pulse 1s infinite; }
+        .btn-send { background: var(--primary); color: white; }
+
+        /* Tables & Lists */
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .card h2 { font-size: 1.2rem; margin-bottom: 1rem; color: #1f2937; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: #f8fafc;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .product-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            background: #fdfdfd;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .product-card h4 { font-size: 0.95rem; margin-bottom: 0.3rem; }
+        .product-card .price { font-size: 1.1rem; font-weight: 700; color: #059669; }
+        .product-card .unit { font-size: 0.8rem; color: var(--text-muted); }
+
+        .search-bar {
+            width: 100%;
+            max-width: 400px;
+            padding: 0.65rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <div class="brand-logo">DM</div>
+            <div>
+                <h1>DMart Express</h1>
+                <p>Local Voice-AI Telephony System (ಕನ್ನಡ & English)</p>
+            </div>
+        </div>
+        <div class="system-badges">
+            <span class="badge badge-green"><span class="pulse-dot"></span> Telephony Server: Port 8765</span>
+            <span class="badge badge-blue">Model: <span id="badge-model">gemma3:latest</span></span>
+            <span class="badge badge-amber">Language: Kannada (ಕನ್ನಡ)</span>
+        </div>
+    </header>
+
+    <nav class="tabs">
+        <button class="tab-btn active" onclick="showTab('tab-phone')">📞 Live Phone Simulator</button>
+        <button class="tab-btn" onclick="showTab('tab-products')">🛒 Products Catalog</button>
+        <button class="tab-btn" onclick="showTab('tab-customers')">👥 Customer Registry</button>
+        <button class="tab-btn" onclick="showTab('tab-orders')">📋 Recent Orders</button>
+        <button class="tab-btn" onclick="showTab('tab-telephony')">⚙️ Twilio & Tunnel Setup</button>
+    </nav>
+
+    <main>
+        <!-- TAB 1: PHONE SIMULATOR -->
+        <div id="tab-phone" class="tab-pane active">
+            <div class="simulator-grid">
+                <!-- Virtual Handset -->
+                <div class="phone-card">
+                    <div class="phone-header">
+                        <div class="phone-notch"></div>
+                        <h3>Virtual Handset</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">Simulate an incoming PSTN customer phone call</p>
+                    </div>
+
+                    <label class="caller-select-label">Choose Caller Profile:</label>
+                    <select id="caller-select" class="phone-input" onchange="onCallerChange()">
+                        <option value="+919876543210">Rahul Sharma (+919876543210) - Registered</option>
+                        <option value="+919812345678">Priya Patel (+919812345678) - Registered</option>
+                        <option value="+919765432100">Ananya Iyer (+919765432100) - Registered</option>
+                        <option value="+919111222333">New Caller (+919111222333) - Unregistered</option>
+                        <option value="custom">Custom Phone Number...</option>
+                    </select>
+
+                    <input type="text" id="custom-phone" class="phone-input" placeholder="+91..." style="display: none;" />
+
+                    <div class="call-controls">
+                        <button id="btn-call" class="btn btn-call" onclick="startCall()">
+                            <span>📞 Call DMart</span>
+                        </button>
+                        <button id="btn-hangup" class="btn btn-hangup" onclick="endCall()">
+                            <span>🔴 End Call</span>
+                        </button>
+                    </div>
+
+                    <div id="call-status" class="call-status-indicator">
+                        Phone Status: Idle (Ready to call)
+                    </div>
+
+                    <div style="margin-top: 1.25rem; font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
+                        <strong>💡 How it works:</strong>
+                        <ul style="padding-left: 1.2rem; margin-top: 0.3rem;">
+                            <li>Registered callers are welcomed by name in Kannada. Address is never re-asked.</li>
+                            <li>Unregistered callers are prompted for their name and delivery address, then auto-registered.</li>
+                            <li>Piper TTS synthesizes Kannada speech directly in your browser.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Chat & Voice Stream Window -->
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <div>
+                            <h3>Priya (Voice Assistant)</h3>
+                            <span id="call-timer" style="font-size: 0.8rem; color: #059669; font-weight: 600;">Call: Inactive</span>
+                        </div>
+                        <button class="chip" onclick="clearChat()">Clear Log</button>
+                    </div>
+
+                    <div id="chat-messages" class="chat-messages">
+                        <div class="msg-bubble msg-ai" style="align-self: center; text-align: center; background: #f8fafc; border-color: #e2e8f0; color: var(--text-muted);">
+                            Click <strong>"Call DMart"</strong> to initiate the voice AI call session.
+                        </div>
+                    </div>
+
+                    <div class="suggestion-chips">
+                        <span class="chip" onclick="sendSuggestion('ಹಾಲು ಮತ್ತು ಬ್ರೆಡ್ ಬೇಕು')">🥛 ಹಾಲು & ಬ್ರೆಡ್</span>
+                        <span class="chip" onclick="sendSuggestion('1 ಲೀಟರ್ ಸೂರ್ಯಕಾಂತಿ ಎಣ್ಣೆ ಮತ್ತು 1 ಕೆಜಿ ಸಕ್ಕರೆ')">🌻 ಎಣ್ಣೆ & ಸಕ್ಕರೆ</span>
+                        <span class="chip" onclick="sendSuggestion('ಚಹಾ ಪುಡಿ ಮತ್ತು ಬಿಸ್ಕತ್ತು')">☕ ಚಹಾ ಪುಡಿ</span>
+                        <span class="chip" onclick="sendSuggestion('ನನ್ನ ಹೆಸರು ರಮೇಶ್, ವಿಳಾಸ #12 ಜಯನಗರ, ಬೆಂಗಳೂರು')">📝 ಹೆಸರು & ವಿಳಾಸ ನೋಂದಣಿ</span>
+                        <span class="chip" onclick="sendSuggestion('ಹೌದು, ದಯವಿಟ್ಟು ಡೆಲಿವರಿ ಕನ್ಫರ್ಮ್ ಮಾಡಿ')">✅ ಆರ್ಡರ್ ಖಚಿತಪಡಿಸಿ</span>
+                    </div>
+
+                    <div class="chat-input-row">
+                        <input type="text" id="user-input" class="chat-input" placeholder="Type in Kannada or English (e.g. ಹಾಲು ಬೇಕು, 1L oil)..." onkeydown="if(event.key==='Enter') sendTurn()" disabled />
+                        <button id="btn-mic" class="btn-icon btn-mic" onclick="toggleMic()" title="Speak via Microphone" disabled>🎤</button>
+                        <button id="btn-send" class="btn-icon btn-send" onclick="sendTurn()" title="Send Message" disabled>➤</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: PRODUCTS CATALOG -->
+        <div id="tab-products" class="tab-pane">
+            <div class="card">
+                <h2>DMart Grocery Catalog & Real-Time Stock</h2>
+                <input type="text" class="search-bar" id="product-search" placeholder="Search catalog (e.g. oil, milk, tea, rice, ಹಾಲು)..." oninput="loadProducts(this.value)" />
+                <div id="products-list" class="product-grid">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: CUSTOMERS -->
+        <div id="tab-customers" class="tab-pane">
+            <div class="card">
+                <h2>Registered Caller Profiles</h2>
+                <table id="customers-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Phone Number</th>
+                            <th>Name</th>
+                            <th>Saved Delivery Address</th>
+                            <th>Registered At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customers-tbody">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 4: RECENT ORDERS -->
+        <div id="tab-orders" class="tab-pane">
+            <div class="card">
+                <h2>Recent Customer Orders</h2>
+                <div id="orders-list">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: TELEPHONY SETTINGS -->
+        <div id="tab-telephony" class="tab-pane">
+            <div class="card">
+                <h2>Twilio Telephony & Public Tunnel Setup</h2>
+                <p style="margin-bottom: 1rem; color: var(--text-muted); line-height: 1.6;">
+                    To receive real phone calls on your Twilio virtual number, expose this local server to the internet using the bundled <strong>Cloudflare Tunnel</strong> or <strong>ngrok</strong>.
+                </p>
+
+                <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Step 1: Launch Cloudflare Tunnel</h3>
+                <pre style="background: #1e293b; color: #38bdf8; padding: 1rem; border-radius: 8px; overflow-x: auto;">.\cloudflared.exe tunnel --url http://localhost:8765</pre>
+
+                <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Step 2: Configure Twilio Phone Number Webhook</h3>
+                <p style="color: var(--text-muted); margin-bottom: 0.5rem;">In your Twilio Console, set the Voice Webhook for your phone number to:</p>
+                <pre style="background: #1e293b; color: #a7f3d0; padding: 1rem; border-radius: 8px; overflow-x: auto;">https://&lt;GENERATED_CLOUDFLARE_DOMAIN&gt;.trycloudflare.com/voice/incoming  (HTTP POST)</pre>
+
+                <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Or run the automated script:</h3>
+                <pre style="background: #1e293b; color: #fde68a; padding: 1rem; border-radius: 8px; overflow-x: auto;">.venv\Scripts\python.exe scripts/setup_twilio_webhook.py https://&lt;DOMAIN&gt;.trycloudflare.com/voice/incoming</pre>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentCall = null;
+        let callSeconds = 0;
+        let timerInterval = null;
+        let recognition = null;
+        let isRecording = false;
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+            if (tabId === 'tab-products') loadProducts();
+            if (tabId === 'tab-customers') loadCustomers();
+            if (tabId === 'tab-orders') loadOrders();
+        }
+
+        function onCallerChange() {
+            const select = document.getElementById('caller-select');
+            const custom = document.getElementById('custom-phone');
+            custom.style.display = select.value === 'custom' ? 'block' : 'none';
+        }
+
+        function getSelectedPhone() {
+            const select = document.getElementById('caller-select');
+            if (select.value === 'custom') {
+                return document.getElementById('custom-phone').value.trim() || '+919876543210';
+            }
+            return select.value;
+        }
+
+        async function startCall() {
+            const phone = getSelectedPhone();
+            const statusEl = document.getElementById('call-status');
+            statusEl.innerText = "Connecting call to Priya (Voice AI)...";
+            statusEl.className = "call-status-indicator active";
+
+            try {
+                const res = await fetch('/api/simulate/call', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ caller_phone: phone })
+                });
+                const data = await res.json();
+                currentCall = data;
+
+                document.getElementById('btn-call').style.display = 'none';
+                document.getElementById('btn-hangup').style.display = 'inline-flex';
+                document.getElementById('user-input').disabled = false;
+                document.getElementById('btn-mic').disabled = false;
+                document.getElementById('btn-send').disabled = false;
+
+                startTimer();
+                statusEl.innerText = `Connected: ${phone} (${data.customer ? data.customer.name : 'Unregistered'})`;
+
+                // Add Priya greeting to chat
+                addMessage('Priya (DMart AI)', data.greeting_text, 'ai', data.audio_base64);
+                if (data.audio_base64) playBase64Audio(data.audio_base64);
+
+            } catch (err) {
+                alert("Error starting call: " + err);
+                statusEl.innerText = "Failed to connect call.";
+                statusEl.className = "call-status-indicator";
+            }
+        }
+
+        function endCall() {
+            clearInterval(timerInterval);
+            callSeconds = 0;
+            document.getElementById('call-timer').innerText = "Call: Inactive";
+            document.getElementById('btn-call').style.display = 'inline-flex';
+            document.getElementById('btn-hangup').style.display = 'none';
+            document.getElementById('user-input').disabled = true;
+            document.getElementById('btn-mic').disabled = true;
+            document.getElementById('btn-send').disabled = true;
+
+            const statusEl = document.getElementById('call-status');
+            statusEl.innerText = "Call ended.";
+            statusEl.className = "call-status-indicator";
+            currentCall = null;
+        }
+
+        function startTimer() {
+            callSeconds = 0;
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                callSeconds++;
+                const mins = Math.floor(callSeconds / 60).toString().padStart(2, '0');
+                const secs = (callSeconds % 60).toString().padStart(2, '0');
+                document.getElementById('call-timer').innerText = `Live Call: ${mins}:${secs}`;
+            }, 1000);
+        }
+
+        async function sendTurn(textOverride) {
+            const input = document.getElementById('user-input');
+            const text = (textOverride || input.value).trim();
+            if (!text || !currentCall) return;
+            input.value = '';
+
+            addMessage('You (Caller)', text, 'user');
+
+            try {
+                const res = await fetch('/api/simulate/turn', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        caller_phone: currentCall.caller_phone,
+                        text: text
+                    })
+                });
+                const data = await res.json();
+                addMessage('Priya (DMart AI)', data.reply_text, 'ai', data.audio_base64);
+                if (data.audio_base64) playBase64Audio(data.audio_base64);
+            } catch (err) {
+                addMessage('System', 'Error executing turn: ' + err, 'ai');
+            }
+        }
+
+        function sendSuggestion(text) {
+            if (!currentCall) {
+                alert("Please click 'Call DMart' first to initiate the call session.");
+                return;
+            }
+            sendTurn(text);
+        }
+
+        function addMessage(author, text, type, audioB64) {
+            const container = document.getElementById('chat-messages');
+            const bubble = document.createElement('div');
+            bubble.className = `msg-bubble msg-${type}`;
+
+            let playHtml = '';
+            if (audioB64) {
+                playHtml = `<br><button class="msg-play-btn" onclick="playBase64Audio('${audioB64}')">🔊 Replay Audio</button>`;
+            }
+
+            bubble.innerHTML = `
+                <div class="msg-author">${author}</div>
+                <div>${text}</div>
+                ${playHtml}
+            `;
+            container.appendChild(bubble);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function playBase64Audio(base64Wav) {
+            try {
+                const snd = new Audio("data:audio/wav;base64," + base64Wav);
+                snd.play();
+            } catch (e) {
+                console.error("Audio playback error:", e);
+            }
+        }
+
+        function clearChat() {
+            document.getElementById('chat-messages').innerHTML = '';
+        }
+
+        // Web Speech API for Mic input
+        function toggleMic() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert("Speech recognition is not supported in this browser. Please use Chrome/Edge or type your response.");
+                return;
+            }
+
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const micBtn = document.getElementById('btn-mic');
+
+            if (isRecording) {
+                recognition.stop();
+                return;
+            }
+
+            recognition = new SpeechRec();
+            recognition.lang = 'kn-IN'; // Kannada (India)
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                isRecording = true;
+                micBtn.classList.add('recording');
+            };
+
+            recognition.onresult = (event) => {
+                const speechResult = event.results[0][0].transcript;
+                document.getElementById('user-input').value = speechResult;
+                sendTurn(speechResult);
+            };
+
+            recognition.onerror = (e) => {
+                console.error("Speech error", e);
+                isRecording = false;
+                micBtn.classList.remove('recording');
+            };
+
+            recognition.onend = () => {
+                isRecording = false;
+                micBtn.classList.remove('recording');
+            };
+
+            recognition.start();
+        }
+
+        // Load Products
+        async function loadProducts(query = '') {
+            const res = await fetch('/api/products?query=' + encodeURIComponent(query));
+            const data = await res.json();
+            const list = document.getElementById('products-list');
+            list.innerHTML = (data.products || []).map(p => `
+                <div class="product-card">
+                    <div>
+                        <span class="badge badge-green" style="margin-bottom: 0.5rem;">${p.category}</span>
+                        <h4>${p.name}</h4>
+                        <div class="unit">${p.unit} • Stock: ${p.stock_quantity}</div>
+                    </div>
+                    <div style="margin-top: 0.75rem;">
+                        <span class="price">₹${p.price.toFixed(2)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Load Customers
+        async function loadCustomers() {
+            const res = await fetch('/api/customers');
+            const data = await res.json();
+            const tbody = document.getElementById('customers-tbody');
+            tbody.innerHTML = (data.customers || []).map(c => `
+                <tr>
+                    <td>${c.id}</td>
+                    <td><strong>${c.phone_number}</strong></td>
+                    <td>${c.name}</td>
+                    <td>${c.address}</td>
+                    <td>${c.created_at}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Load Orders
+        async function loadOrders() {
+            const res = await fetch('/api/orders');
+            const data = await res.json();
+            const list = document.getElementById('orders-list');
+            if (!data.orders || data.orders.length === 0) {
+                list.innerHTML = '<p style="color: var(--text-muted);">No orders found.</p>';
+                return;
+            }
+            list.innerHTML = data.orders.map(o => `
+                <div style="border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; background: #fafafa;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <strong>Order ID: ${o.order_id}</strong>
+                        <span class="badge ${o.status === 'CONFIRMED' ? 'badge-green' : 'badge-amber'}">${o.status}</span>
+                    </div>
+                    <div style="font-size: 0.9rem; color: #334155; margin-bottom: 0.5rem;">
+                        Customer: <strong>${o.customer_name}</strong> (${o.customer_phone}) • Total: <strong>₹${o.total_amount}</strong>
+                    </div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        Delivery: ${o.delivery_address || 'Store Pickup'} • ETA: ${o.estimated_delivery_time || 'N/A'}
+                    </div>
+                    <div style="font-size: 0.85rem; background: white; padding: 0.5rem; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        Items: ${(o.items || []).map(i => `${i.product_name} (${i.quantity}x)`).join(', ')}
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

@@ -1,14 +1,11 @@
 fastapi>=0.111.0
 uvicorn[standard]>=0.30.0
 websockets>=12.0
-pipecat-ai>=0.0.40
-faster-whisper>=1.0.0
-piper-tts>=1.2.0
-ollama>=0.3.0
 pydantic>=2.7.0
+pydantic-settings>=2.2.0
 python-dotenv>=1.0.1
+python-multipart>=0.0.9
 twilio>=9.0.0
 loguru>=0.7.2
 numpy>=1.26.0
-sounddevice>=0.4.6
-pydantic-settings>=2.2.0
+google-genai>=1.52.0

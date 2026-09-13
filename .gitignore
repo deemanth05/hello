@@ -21,4 +21,13 @@ whisper_models/
 .vscode/
 .idea/
 
+# Binaries & Tunnels
+cloudflared.exe
+*.exe
 
+# Audio files & test outputs
+*.wav
+*.mp3
+
+# Logs
+*.log

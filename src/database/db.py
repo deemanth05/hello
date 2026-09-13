@@ -12,7 +12,7 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 @contextmanager
-def get_db_cursor() -> Generator[sqlite3.Cursor,None,None]:
+def get_db_cursor() -> Generator[sqlite3.Cursor, None, None]:
     conn = get_connection()
     cursor = conn.cursor()
     try:
@@ -26,12 +26,23 @@ def get_db_cursor() -> Generator[sqlite3.Cursor,None,None]:
         conn.close()
 
 def init_db():
-    """Initializes tables and seeds DMart grocery catalog."""
+    """Initializes tables, indexes, and seeds DMart grocery catalog and customers."""
     with get_db_cursor() as cursor:
-
-        # 1. Products / Inventory
+        # 1. Customers Table (Caller ID Registry)
         cursor.execute("""
-        CREATE TABLE IF NOT EXISTS products (
+            CREATE TABLE IF NOT EXISTS customers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                phone_number TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL,
+                address TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone_number);")
+
+        # 2. Products / Inventory Table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS products (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT UNIQUE NOT NULL,
                 category TEXT NOT NULL,
@@ -40,8 +51,10 @@ def init_db():
                 stock_quantity INTEGER NOT NULL DEFAULT 50
             );
         """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_products_name ON products(name);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);")
 
-        # 2. Orders table
+        # 3. Orders Table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS orders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,12 +64,20 @@ def init_db():
                 delivery_type TEXT NOT NULL,      -- 'delivery' or 'pickup'
                 delivery_address TEXT,
                 total_amount REAL NOT NULL,
+                estimated_delivery_time TEXT,     -- e.g. '45 minutes (approx 6:15 PM)'
                 status TEXT NOT NULL DEFAULT 'CONFIRMED', -- 'CONFIRMED', 'DELIVERED', 'CANCELLED'
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_orders_phone ON orders(customer_phone);")
 
-        # 3. Order Line Items
+        # Migrate orders table if created previously without estimated_delivery_time
+        cursor.execute("PRAGMA table_info(orders);")
+        columns = [col["name"] for col in cursor.fetchall()]
+        if "estimated_delivery_time" not in columns:
+            cursor.execute("ALTER TABLE orders ADD COLUMN estimated_delivery_time TEXT;")
+
+        # 4. Order Line Items Table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS order_items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,30 +92,66 @@ def init_db():
             );
         """)
 
-        # 4. Seed Popular Supermarket Products
+        # 5. Seed Registered Customers for Testing
+        test_customers = [
+            ("+917676219923", "Deemanth", "Krishna Nagar, Bengaluru"),
+            ("7676219923", "Deemanth", "Krishna Nagar, Bengaluru"),
+            ("+919008474173", "Deemanth", "Krishna Nagar, Bengaluru"),
+            ("9008474173", "Deemanth", "Krishna Nagar, Bengaluru"),
+            ("+919876543210", "Rahul Sharma", "Flat 402, Sunshine Heights, Mumbai"),
+            ("+919812345678", "Priya Patel", "House 12, Green Glen Layout, Bangalore"),
+            ("+919765432100", "Ananya Iyer", "A-204, Palm Meadows, Whitefield, Bangalore"),
+            ("9876543210", "Rahul Sharma", "Flat 402, Sunshine Heights, Mumbai"),
+            ("9812345678", "Priya Patel", "House 12, Green Glen Layout, Bangalore"),
+        ]
+        cursor.executemany("""
+            INSERT OR IGNORE INTO customers (phone_number, name, address)
+            VALUES (?, ?, ?)
+        """, test_customers)
+
+        # 6. Seed Popular Supermarket Products Catalog
         catalog = [
             # Groceries & Staples
-            ("Fortune Sunlite SunflowerOil 1L", "Groceries", 140.0, "1 Liter", 50),
+            ("Fortune Sunlite Sunflower Oil 1L", "Groceries", 140.0, "1 Liter", 50),
+            ("Fortune Premium Kachi Ghani Mustard Oil 1L", "Groceries", 155.0, "1 Liter", 40),
             ("India Gate Basmati Rice 5kg", "Groceries", 399.0, "5 kg", 30),
+            ("Kolam Rice 5kg", "Groceries", 290.0, "5 kg", 35),
             ("Tata Salt 1kg", "Groceries", 28.0, "1 kg", 100),
             ("Aashirvaad Superior MP Atta 5kg", "Groceries", 245.0, "5 kg", 40),
+            ("Aashirvaad Shudh Chakki Atta 10kg", "Groceries", 460.0, "10 kg", 25),
             ("Tata Sampann Toor Dal 1kg", "Groceries", 165.0, "1 kg", 60),
-            ("Madhur Pure Sugar 1kg", "Groceries", 45.0, "1 kg", 80),
+            ("Tata Sampann Moong Dal 1kg", "Groceries", 145.0, "1 kg", 50),
+            ("Madhur Pure & Hygienic Sugar 1kg", "Groceries", 45.0, "1 kg", 80),
             
-            # Dairy & Bakery
-            ("Amul Taaza Toned Milk 1L", "Dairy", 54.0, "1 Liter", 40),
+            # Dairy, Bakery & Eggs
+            ("Amul Taaza Toned Milk 1L", "Dairy", 54.0, "1 Liter", 50),
+            ("Amul Gold Full Cream Milk 1L", "Dairy", 68.0, "1 Liter", 40),
             ("Amul Butter 500g", "Dairy", 275.0, "500 g", 35),
+            ("Amul Malai Paneer 200g", "Dairy", 90.0, "200 g", 30),
             ("Britannia 100% Whole Wheat Bread", "Bakery", 45.0, "400 g", 25),
+            ("Britannia Milk Bread", "Bakery", 40.0, "400 g", 25),
             ("Farm Fresh Eggs (Pack of 6)", "Dairy", 50.0, "6 pieces", 50),
+            ("Farm Fresh Eggs (Pack of 12)", "Dairy", 95.0, "12 pieces", 40),
             
             # Snacks & Beverages
             ("Maggi 2-Minute Noodles 4-Pack", "Snacks", 56.0, "280 g", 70),
             ("Red Label Tea 500g", "Beverages", 260.0, "500 g", 45),
+            ("Taj Mahal Tea 500g", "Beverages", 320.0, "500 g", 30),
             ("Nescafe Classic Instant Coffee 50g", "Beverages", 195.0, "50 g", 30),
+            ("BRU Instant Coffee 100g", "Beverages", 210.0, "100 g", 30),
+            ("Parle-G Gold Biscuits 1kg", "Snacks", 120.0, "1 kg", 60),
+            ("Lay's Classic Salted Chips 50g", "Snacks", 20.0, "50 g", 80),
+            
+            # Fresh Produce / Staples
+            ("Fresh Red Onions 1kg", "Produce", 35.0, "1 kg", 80),
+            ("Fresh Potatoes 1kg", "Produce", 30.0, "1 kg", 80),
+            ("Fresh Hybrid Tomatoes 1kg", "Produce", 25.0, "1 kg", 60),
             
             # Household & Personal Care
             ("Surf Excel Easy Wash Detergent Powder 1kg", "Household", 135.0, "1 kg", 50),
+            ("Vim Lemon Dishwash Gel 500ml", "Household", 105.0, "500 ml", 40),
             ("Dettol Original Soap (Pack of 3)", "Personal Care", 110.0, "3x75g", 40),
+            ("Colgate Strong Teeth Toothpaste 200g", "Personal Care", 98.0, "200 g", 50),
         ]
         
         cursor.executemany("""
@@ -102,7 +159,7 @@ def init_db():
             VALUES (?, ?, ?, ?, ?)
         """, catalog)
 
-    logger.info(f"D Mart databse initiaized at {settings.DATABASE_PATH}")
+    logger.info(f"DMart database initialized successfully at {settings.DATABASE_PATH}")
 
 if __name__ == "__main__":
     init_db()

@@ -235,12 +235,22 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
                                 logger.info(f"[Tool Call] {call.name} args: {call.args}")
                                 res = execute_tool_call(call.name, call.args, default_phone=caller_phone)
                                 logger.info(f"[Tool Result] {res}")
+                                if isinstance(res, str):
+                                    try:
+                                        res_dict = json.loads(res)
+                                    except Exception:
+                                        res_dict = {"result": res}
+                                elif isinstance(res, dict):
+                                    res_dict = res
+                                else:
+                                    res_dict = {"result": str(res)}
+
                                 await session.send_tool_response(
                                     function_responses=[
                                         types.FunctionResponse(
                                             name=call.name,
                                             id=call.id,
-                                            response={"result": res}
+                                            response=res_dict
                                         )
                                     ]
                                 )

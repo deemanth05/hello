@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     DATABASE_PATH: Path = BASE_DIR/"dmart_store.db"
 
     STORE_NAME: str = "D mart Express"
-    STORE_PHONE: str = "+17744930623"
+    STORE_PHONE: str = "+18554161860"
     MINIMUM_ORDER_VALUE: float = 250.0
     DELIVERY_FEE:float = 30.0
 

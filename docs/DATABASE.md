@@ -74,11 +74,11 @@ Stores customer caller identities, names, and saved street delivery addresses.
 On database initialization (`init_db()`), the following customer profiles are pre-seeded in SQLite:
 | Phone Number | Customer Name | Pre-Registered Delivery Address |
 | :--- | :--- | :--- |
-| `+917676219923` / `7676219923` | Deemanth | Krishna Nagar, Bengaluru |
-| `+919008474173` / `9008474173` | Deemanth | Krishna Nagar, Bengaluru |
 | `+919876543210` / `9876543210` | Rahul Sharma | Flat 402, Sunshine Heights, Mumbai |
 | `+919812345678` / `9812345678` | Priya Patel | House 12, Green Glen Layout, Bangalore |
 | `+919765432100` | Ananya Iyer | A-204, Palm Meadows, Whitefield, Bangalore |
+
+Custom verified numbers can also be registered securely without modifying code by defining `TEST_CUSTOMER_PHONE`, `TEST_CUSTOMER_NAME`, and `TEST_CUSTOMER_ADDRESS` in `.env` or cloud environment variables.
 
 ---
 

@@ -92,21 +92,33 @@ def init_db():
             );
         """)
 
-        # 5. Seed Registered Customers for Testing
+        # 5. Seed Registered Customers for Testing (Generic Demo Profiles)
         test_customers = [
-            ("+917676219923", "Deemanth", "Krishna Nagar, Bengaluru"),
-            ("7676219923", "Deemanth", "Krishna Nagar, Bengaluru"),
-            ("+919008474173", "Deemanth", "Krishna Nagar, Bengaluru"),
-            ("9008474173", "Deemanth", "Krishna Nagar, Bengaluru"),
             ("+919876543210", "Rahul Sharma", "Flat 402, Sunshine Heights, Mumbai"),
             ("+919812345678", "Priya Patel", "House 12, Green Glen Layout, Bangalore"),
             ("+919765432100", "Ananya Iyer", "A-204, Palm Meadows, Whitefield, Bangalore"),
             ("9876543210", "Rahul Sharma", "Flat 402, Sunshine Heights, Mumbai"),
             ("9812345678", "Priya Patel", "House 12, Green Glen Layout, Bangalore"),
         ]
+
+        # Securely load custom caller profile from private environment variables
+        env_phone = os.getenv("TEST_CUSTOMER_PHONE") or os.getenv("CALLER_PHONE")
+        env_name = os.getenv("TEST_CUSTOMER_NAME") or os.getenv("CALLER_NAME", "Valued Customer")
+        env_address = os.getenv("TEST_CUSTOMER_ADDRESS") or os.getenv("CALLER_ADDRESS", "Bengaluru, Karnataka")
+        if env_phone:
+            clean_p = env_phone.strip()
+            test_customers.append((clean_p, env_name, env_address))
+            if clean_p.startswith("+91"):
+                test_customers.append((clean_p.replace("+91", ""), env_name, env_address))
+            elif not clean_p.startswith("+"):
+                test_customers.append((f"+91{clean_p}", env_name, env_address))
+
         cursor.executemany("""
-            INSERT OR IGNORE INTO customers (phone_number, name, address)
+            INSERT INTO customers (phone_number, name, address)
             VALUES (?, ?, ?)
+            ON CONFLICT(phone_number) DO UPDATE SET
+                name = excluded.name,
+                address = excluded.address
         """, test_customers)
 
         # 6. Seed Popular Supermarket Products Catalog

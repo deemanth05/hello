@@ -17,8 +17,8 @@ for line in env_path.read_text().splitlines():
 auth_str = base64.b64encode(f"{account_sid}:{auth_token}".encode()).decode()
 headers = {"Authorization": f"Basic {auth_str}"}
 
-phone = sys.argv[1] if len(sys.argv) > 1 else "+919008474173"
-friendly = sys.argv[2] if len(sys.argv) > 2 else "Deemanth Second Phone"
+phone = sys.argv[1] if len(sys.argv) > 1 else os.getenv("TEST_CUSTOMER_PHONE", "+919876543210")
+friendly = sys.argv[2] if len(sys.argv) > 2 else os.getenv("TEST_CUSTOMER_NAME", "Verified Phone")
 
 print(f"Initiating Twilio Caller ID verification for {phone}...")
 payload = urllib.parse.urlencode({

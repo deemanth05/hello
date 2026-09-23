@@ -1,7 +1,8 @@
-from loguru import logger      
+import os
 import sqlite3
 from typing import Generator
 from contextlib import contextmanager
+from loguru import logger
 from src.config import settings
 
 def get_connection() -> sqlite3.Connection:

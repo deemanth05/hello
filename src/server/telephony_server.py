@@ -47,7 +47,7 @@ async def health():
     return {
         "status": "healthy",
         "store": settings.STORE_NAME,
-        "model": settings.OLLAMA_MODEL
+        "model": "gemini-2.5-flash-native-audio-latest" if settings.GEMINI_API_KEY else settings.OLLAMA_MODEL
     }
 
 @app.get("/api/customers")

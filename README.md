@@ -19,7 +19,7 @@ The service is configured for zero-overhead deployment on **Render**:
 - **Live URL**: `https://hello-8ct1.onrender.com`
 - **Management Dashboard**: `https://hello-8ct1.onrender.com/` (Interactive Store Status, Live Orders Feed, and Web Call Simulator)
 - **Twilio Voice Webhook**: `https://hello-8ct1.onrender.com/voice/incoming` (HTTP POST)
-- **Twilio Store Phone**: `+1 (774) 493-0623`
+- **Twilio Store Phone**: `+1 (855) 416-1860`
 - **Memory Footprint**: ~90 MB RAM on Render Free Tier via selective lazy-loading.
 
 ---
@@ -98,7 +98,7 @@ Install dependencies:
 Copy `.env.example` to `.env` and fill in credentials:
 ```env
 STORE_NAME="D mart Express"
-STORE_PHONE="+17744930623"
+STORE_PHONE="+18554161860"
 LANGUAGE="kn"
 SERVER_PORT=8765
 
@@ -108,7 +108,7 @@ GEMINI_API_KEY="your-gemini-api-key"
 # For Twilio Telephony Webhook Management
 TWILIO_ACCOUNT_SID="your-account-sid"
 TWILIO_AUTH_TOKEN="your-auth-token"
-TWILIO_PHONE_NUMBER="+17744930623"
+TWILIO_PHONE_NUMBER="+18554161860"
 ```
 
 ### 3. Run Automated Tests

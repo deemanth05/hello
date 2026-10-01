@@ -219,6 +219,7 @@ def execute_tool_call(name: str, arguments: Dict[str, Any], default_phone: Optio
                 delivery_type=str(del_type),
                 delivery_address=str(address) if address else None
             )
+            logger.info(f"[Booking Tools] place_order result: {res}")
             return json.dumps(res)
             
         elif name == "track_order":

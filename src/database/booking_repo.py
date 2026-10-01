@@ -9,18 +9,16 @@ from loguru import logger
 
 # Common grocery synonym / intent mappings for general voice requests (English, Kannada Script, and Kanglish)
 SEMANTIC_SYNONYMS = {
-    # Milk / Dairy
-    "tea": ["tea", "sugar", "milk"],
-    "chai": ["tea", "sugar", "milk"],
-    "ಚಹಾ": ["tea", "sugar", "milk"],
-    "ಟೀ": ["tea", "sugar", "milk"],
+    # Dairy & Milk Products
     "ಹಾಲು": ["milk", "amul taaza", "amul gold"],
+    "ಹಾಲಿನ": ["milk", "amul taaza", "amul gold"],
+    "ಹಾಲಿನ ಪ್ಯಾಕೆಟ್": ["amul taaza", "amul gold", "milk"],
     "haalu": ["milk", "amul taaza", "amul gold"],
     "milk": ["milk", "amul taaza", "amul gold"],
     "ಮೊಸರು": ["milk", "paneer"],
     "ಬೆಣ್ಣೆ": ["butter", "amul butter"],
     "butter": ["butter", "amul butter"],
-    "dairy": ["milk", "butter", "paneer", "eggs"],
+    "dairy": ["milk", "butter", "paneer"],
     "ಪನೀರ್": ["paneer", "amul malai paneer"],
     "paneer": ["paneer", "amul malai paneer"],
 
@@ -39,6 +37,8 @@ SEMANTIC_SYNONYMS = {
     "flour": ["atta", "aashirvaad"],
     "ಬೇಳೆ": ["toor dal", "moong dal"],
     "ತೊಗರಿ ಬೇಳೆ": ["toor dal"],
+    "ಕಡಲೆ ಬೇಳೆ": ["toor dal"],
+    "ಹೆಸರು ಬೇಳೆ": ["moong dal"],
     "bele": ["toor dal", "moong dal"],
     "dal": ["dal", "toor dal", "moong dal"],
     "pulses": ["dal", "toor dal", "moong dal"],
@@ -47,32 +47,44 @@ SEMANTIC_SYNONYMS = {
     "salt": ["salt", "tata salt"],
     "ಎಣ್ಣೆ": ["sunflower oil", "mustard oil"],
     "ಅಡುಗೆ ಎಣ್ಣೆ": ["sunflower oil"],
+    "ಸೂರ್ಯಕಾಂತಿ ಎಣ್ಣೆ": ["sunflower oil"],
     "enne": ["sunflower oil", "mustard oil"],
     "oil": ["oil", "sunflower", "mustard"],
     "cooking oil": ["sunflower oil", "mustard oil"],
 
     # Breakfast & Bakery
-    "ತಿಂಡಿ": ["bread", "eggs", "butter", "milk"],
-    "tindi": ["bread", "eggs", "butter", "milk"],
-    "breakfast": ["bread", "eggs", "butter", "milk"],
+    "ತಿಂಡಿ": ["bread", "butter", "milk"],
+    "tindi": ["bread", "butter", "milk"],
+    "breakfast": ["bread", "butter", "milk"],
     "ಬ್ರೆಡ್": ["bread", "whole wheat bread"],
     "bread": ["whole wheat bread", "milk bread"],
     "ಮೊಟ್ಟೆ": ["eggs", "farm fresh eggs"],
     "motte": ["eggs", "farm fresh eggs"],
     "eggs": ["eggs", "farm fresh eggs"],
+    "egg": ["eggs", "farm fresh eggs"],
 
-    # Beverages & Coffee
-    "ಕಾಫಿ": ["coffee", "nescafe", "bru"],
-    "coffee": ["coffee", "sugar", "milk", "nescafe", "bru"],
-    "filter coffee": ["coffee", "bru"],
+    # Beverages (Tea & Coffee)
+    "tea": ["red label", "taj mahal", "tea"],
+    "chai": ["red label", "taj mahal", "tea"],
+    "ಚಹಾ": ["red label", "taj mahal", "tea"],
+    "ಟೀ": ["red label", "taj mahal", "tea"],
+    "ಟೀ ಪುಡಿ": ["red label", "taj mahal", "tea"],
+    "tea powder": ["red label", "taj mahal", "tea"],
+    "ಕಾಫಿ": ["nescafe", "bru", "coffee"],
+    "ಕಾಫಿ ಪುಡಿ": ["nescafe", "bru", "coffee"],
+    "coffee": ["nescafe", "bru", "coffee"],
+    "coffee powder": ["nescafe", "bru", "coffee"],
+    "filter coffee": ["bru", "nescafe", "coffee"],
 
     # Snacks
     "ಮ್ಯಾಗಿ": ["maggi", "noodles"],
     "maggi": ["maggi", "noodles"],
     "maggie": ["maggi"],
     "noodles": ["maggi"],
-    "ಬಿಸ್ಕತ್ತು": ["biscuits", "parle-g"],
-    "biscuit": ["biscuits", "parle-g"],
+    "ಬಿಸ್ಕತ್ತು": ["parle-g", "biscuits"],
+    "ಬಿಸ್ಕಟ್": ["parle-g", "biscuits"],
+    "biscuit": ["parle-g", "biscuits"],
+    "biscuits": ["parle-g", "biscuits"],
     "snacks": ["maggi", "chips", "biscuits"],
     "ಚಿಪ್ಸ್": ["chips", "lays"],
     "chips": ["chips", "lays"],
@@ -154,11 +166,19 @@ def search_products(query: str = "") -> List[Dict[str, Any]]:
             return [dict(row) for row in cursor.fetchall()]
 
         # 3. Match products containing any relevant term
+        CATEGORY_KEYWORDS = {
+            "dairy", "bakery", "snacks", "beverages", "produce", 
+            "household", "personal care", "groceries", "eggs"
+        }
         conditions = []
         params = []
         for term in all_terms:
-            conditions.append("(LOWER(name) LIKE ? OR LOWER(category) LIKE ?)")
-            params.extend([f"%{term}%", f"%{term}%"])
+            if term.lower() in CATEGORY_KEYWORDS:
+                conditions.append("(LOWER(name) LIKE ? OR LOWER(category) LIKE ?)")
+                params.extend([f"%{term}%", f"%{term}%"])
+            else:
+                conditions.append("LOWER(name) LIKE ?")
+                params.append(f"%{term}%")
 
         query_sql = f"""
             SELECT id, name, category, price, unit, stock_quantity 
@@ -274,26 +294,29 @@ def create_store_order(
             if qty <= 0:
                 qty = 1
             
-            # Match product by tokens
-            tokens = p_name.split()
-            token_query = " AND ".join(["LOWER(name) LIKE ?" for _ in tokens])
-            token_params = [f"%{t.lower()}%" for t in tokens]
+            # Step 1: Match product by tokens (excluding pure numbers/units)
+            raw_tokens = p_name.split()
+            significant_tokens = [t for t in raw_tokens if len(t) > 1 and not t.isdigit() and t.lower() not in {"liter", "litre", "1l", "1kg", "kg", "packet", "pack"}]
             
-            cursor.execute(f"SELECT id, name, price, unit, stock_quantity FROM products WHERE {token_query}", token_params)
-            product = cursor.fetchone()
-            
-            # Loose fallback
-            if not product and len(tokens) > 1:
-                token_or = " OR ".join(["LOWER(name) LIKE ?" for _ in tokens])
-                cursor.execute(f"SELECT id, name, price, unit, stock_quantity FROM products WHERE {token_or} LIMIT 1", token_params)
+            product = None
+            if significant_tokens:
+                token_query = " AND ".join(["LOWER(name) LIKE ?" for _ in significant_tokens])
+                token_params = [f"%{t.lower()}%" for t in significant_tokens]
+                cursor.execute(f"SELECT id, name, price, unit, stock_quantity FROM products WHERE {token_query} LIMIT 1", token_params)
                 product = cursor.fetchone()
             
-            # Semantic search fallback (handles Kannada terms like 'ಹಾಲು', 'ಸಕ್ಕರೆ', etc.)
+            # Step 2: Semantic search fallback (resolves Kannada terms like 'ಹಾಲು', 'ಸಕ್ಕರೆ', 'ಅಕ್ಕಿ', etc.)
             if not product:
                 matches = search_products(p_name)
                 if matches:
                     cursor.execute("SELECT id, name, price, unit, stock_quantity FROM products WHERE id = ?", (matches[0]["id"],))
                     product = cursor.fetchone()
+
+            # Step 3: Loose OR fallback with significant tokens only
+            if not product and len(significant_tokens) > 1:
+                token_or = " OR ".join(["LOWER(name) LIKE ?" for _ in significant_tokens])
+                cursor.execute(f"SELECT id, name, price, unit, stock_quantity FROM products WHERE {token_or} ORDER BY stock_quantity DESC LIMIT 1", [f"%{t.lower()}%" for t in significant_tokens])
+                product = cursor.fetchone()
             
             if not product:
                 return {"success": False, "error": f"Item '{p_name}' not found in catalog."}

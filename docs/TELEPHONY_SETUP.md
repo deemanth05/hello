@@ -7,7 +7,7 @@ This guide walks you through connecting your DMart Voice-AI server to a live tel
 ## 1. Prerequisites
 
 1. An active [Twilio Account](https://www.twilio.com/) (Trial or Paid).
-2. A purchased Twilio phone number (e.g. `+17744930623`).
+2. A purchased Twilio phone number (e.g. `+18554161860`).
 3. Either:
    - **Cloud Hosting on Render** (`https://<app>.onrender.com`), OR
    - **Local Tunnel**: Cloudflare Tunnel (`cloudflared.exe` included) or ngrok.

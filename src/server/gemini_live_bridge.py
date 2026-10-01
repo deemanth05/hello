@@ -2,6 +2,7 @@ import os
 import json
 import base64
 import asyncio
+import time
 import numpy as np
 from typing import Optional
 from loguru import logger
@@ -46,12 +47,12 @@ GEMINI_TOOLS = [
                 "properties": {
                     "items": {
                         "type": "ARRAY",
-                        "description": "List of items with exact name and quantity",
+                        "description": "Complete cumulative list of ALL items and quantities requested by the customer across the entire call. DO NOT skip or omit earlier items.",
                         "items": {
                             "type": "OBJECT",
                             "properties": {
-                                "name": {"type": "STRING"},
-                                "quantity": {"type": "INTEGER"}
+                                "name": {"type": "STRING", "description": "Product name (e.g. milk, ಹಾಲು, sugar, ಸಕ್ಕರೆ, bread, ಬ್ರೆಡ್, tea, coffee)"},
+                                "quantity": {"type": "INTEGER", "description": "Quantity requested"}
                             },
                             "required": ["name", "quantity"]
                         }
@@ -92,10 +93,15 @@ CALLER CONTEXT:
 STRICT OPERATING RULES:
 1. GREETING: Welcome the customer warmly in Kannada using their name (e.g. "ನಮಸ್ಕಾರ {cust['name']}, {store_name} ಗೆ ಸ್ವಾಗತ! ನಿಮಗೆ ಇಂದು ಯಾವ ದಿನಸಿ ಸಾಮಗ್ರಿಗಳು ಬೇಕು?").
 2. DO NOT ASK FOR ADDRESS OR PHONE: Never ask for their phone number or delivery address because it is already registered ({cust['address']}).
-3. GROCERY REQUESTS: When customer asks for items (like ಹಾಲು, ಬ್ರೆಡ್, ಸಕ್ಕರೆ, milk, bread, sugar, etc.), call `search_catalog` immediately to find matching products and mention prices.
-4. ORDER CONFIRMATION: When the customer confirms, call `place_order`. Their registered address is automatically used.
-5. FINAL SUMMARY IN KANNADA: After placing the order, clearly state the items, total rupees, delivery address ({cust['address']}), and expected arrival time (35-45 minutes).
-6. VOICE STYLE: Speak in short, warm, natural conversational sentences (1-2 sentences at a time). No markdown, bullet points, or robotic speech."""
+3. GROCERY REQUESTS & CUMULATIVE CART:
+   - When customer asks for items (like ಹಾಲು, ಬ್ರೆಡ್, ಸಕ್ಕರೆ, milk, bread, sugar, etc.), call `search_catalog` immediately to find matching products and mention prices.
+   - Only recommend varieties of the exact requested product (e.g. Amul Taaza 1L for ₹54 or Amul Gold 1L for ₹68). NEVER suggest unrelated items (such as eggs or other categories) unless the customer explicitly asked for them.
+   - CUMULATIVE CART RETENTION: Maintain a strict cumulative cart of ALL items requested across the entire conversation. If customer asks for milk in turn 1, and later asks for bread and sugar in turn 2, your cart MUST retain ALL THREE items. NEVER drop or forget earlier items!
+4. ORDER CONFIRMATION & CART RECAP:
+   - When the customer asks to place or confirm the order, recap the full list of items in the cart in Kannada to verify with the customer.
+   - When confirmed, IMMEDIATELY call `place_order` with the complete list of ALL requested items in the `items` array. Every single item mentioned across the conversation must be present with its correct quantity.
+5. FINAL SPOKEN SUMMARY IN KANNADA: After calling `place_order`, speak the complete order confirmation warmly in Kannada: announce the Order ID, items ordered, total amount in rupees, delivery address ({cust['address']}), and expected delivery arrival time (e.g. 35 ರಿಂದ 40 ನಿಮಿಷಗಳಲ್ಲಿ). Conclude with a polite thank you ("ಧನ್ಯವಾದಗಳು!").
+6. VOICE STYLE: Speak in short, warm, natural conversational Kannada sentences. No markdown, bullet points, or robotic speech."""
     else:
         return f"""You are 'Priya', the AI phone grocery assistant for {store_name} in Bengaluru, Karnataka.
 You speak natural spoken Kannada (ಕನ್ನಡ) and English.
@@ -106,22 +112,30 @@ CALLER CONTEXT:
 
 STRICT OPERATING RULES:
 1. GREETING & REGISTRATION: Welcome the caller in Kannada: "ನಮಸ್ಕಾರ! {store_name} ಗೆ ಸ್ವಾಗತ. ನಿಮ್ಮ ಮೊಬೈಲ್ ನಂಬರ್ ನೋಂದಣಿ ಆಗಿಲ್ಲ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಹೆಸರು ಮತ್ತು ವಿಳಾಸ ತಿಳಿಸುತ್ತೀರಾ?"
-2. As soon as they provide name and address, call `register_caller`.
-3. Then take their grocery order using `search_catalog` and `place_order`.
-4. Keep spoken responses short and natural."""
+2. When the caller provides their name and delivery address, IMMEDIATELY call `register_caller(customer_name=..., delivery_address=...)`.
+3. GROCERY REQUESTS & CUMULATIVE CART: Help them choose items using `search_catalog`. Suggest only varieties of what they requested; NEVER suggest unrelated items like eggs unless asked. Maintain a cumulative cart across all turns so no requested item is dropped.
+4. ORDER CONFIRMATION: Recap the full list of items in the cart, and when the customer confirms, IMMEDIATELY call `place_order` with all requested items.
+5. FINAL SPOKEN SUMMARY IN KANNADA: After calling `place_order`, speak the complete order confirmation warmly in Kannada: announce the Order ID, items ordered, total amount in rupees, their delivery address, and expected delivery arrival time (35 ರಿಂದ 40 ನಿಮಿಷಗಳಲ್ಲಿ). Conclude with "ಧನ್ಯವಾದಗಳು!".
+6. VOICE STYLE: Speak in short, warm, natural conversational Kannada sentences."""
 
 def pcm24k_to_mulaw8k(pcm24k_bytes: bytes) -> bytes:
-    """Converts 24kHz 16-bit linear PCM from Gemini into 8kHz G.711 mu-law for Twilio."""
+    """Converts 24kHz 16-bit linear PCM from Gemini into 8kHz G.711 mu-law for Twilio with anti-aliasing."""
     if not pcm24k_bytes:
         return b""
-    pcm24k = np.frombuffer(pcm24k_bytes, dtype=np.int16).astype(np.float32) / 32768.0
-    pcm8k = resample_audio(pcm24k, orig_sr=24000, target_sr=8000)
-    return encode_mulaw(pcm8k)
+    pcm16 = np.frombuffer(pcm24k_bytes, dtype=np.int16)
+    # Boxcar anti-aliased 3:1 integer decimation (24,000 Hz -> 8,000 Hz)
+    remainder = len(pcm16) % 3
+    if remainder:
+        pcm16 = pcm16[:-remainder]
+    if len(pcm16) == 0:
+        return b""
+    downsampled_float = pcm16.reshape(-1, 3).mean(axis=1).astype(np.float32) / 32768.0
+    return encode_mulaw(downsampled_float)
 
 async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: str):
     """
     Pure Speech-to-Speech bi-directional bridge between Twilio and Gemini 2.5 Flash Native Audio.
-    No local models, zero STT/TTS latency conflict, sub-500ms turnaround.
+    No local models, zero STT/TTS latency conflict, sub-500ms turnaround, jitter-compensated streaming.
     """
     logger.info(f"[Gemini Live] Starting native speech session for {caller_phone} (SID: {stream_sid})")
     api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
@@ -147,6 +161,24 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
     # Decoupled outbound queue for smooth Twilio streaming
     outbound_audio_queue = asyncio.Queue()
     is_session_active = True
+    is_model_generating = False
+    is_resolving_tool = False
+    is_waiting_for_model_turn = True
+    is_order_placed = False
+    last_audio_sent_time = 0.0
+    last_loud_speech_time = 0.0
+    stream_start_time = time.perf_counter()
+
+    def is_bot_active() -> bool:
+        """Returns True if Gemini is generating, queue has pending audio, or speaker echo is still dissipating."""
+        if is_model_generating or is_resolving_tool or is_waiting_for_model_turn:
+            return True
+        if not outbound_audio_queue.empty():
+            return True
+        # Keep active for 800ms after last chunk was sent to Twilio for acoustic dissipation & network jitter
+        if (time.perf_counter() - last_audio_sent_time) < 0.800:
+            return True
+        return False
 
     cust = get_customer(caller_phone)
     cust_name = cust['name'] if cust else "ಸರ್"
@@ -157,7 +189,10 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
         logger.info(f"[Gemini Live] Connected! Triggering initial greeting in Gemini native voice...")
         
         # Trigger Gemini to speak welcome greeting natively in real-time mode
-        welcome_prompt = f"Please speak the welcome greeting in natural spoken Kannada: 'ನಮಸ್ಕಾರ {cust_name}, D mart Express ಗೆ ಸ್ವಾಗತ! ನಿಮಗೆ ಇಂದು ಯಾವ ದಿನಸಿ ಸಾಮಗ್ರಿಗಳು ಬೇಕು?'"
+        if cust:
+            welcome_prompt = f"Please speak the welcome greeting in natural spoken Kannada: 'ನಮಸ್ಕಾರ {cust_name}, D mart Express ಗೆ ಸ್ವಾಗತ! ನಿಮಗೆ ಇಂದು ಯಾವ ದಿನಸಿ ಸಾಮಗ್ರಿಗಳು ಬೇಕು?'"
+        else:
+            welcome_prompt = f"Please speak the welcome greeting in natural spoken Kannada asking for registration: 'ನಮಸ್ಕಾರ! D mart Express ಗೆ ಸ್ವಾಗತ. ನಿಮ್ಮ ಮೊಬೈಲ್ ನಂಬರ್ ನೋಂದಣಿ ಆಗಿಲ್ಲ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಹೆಸರು ಮತ್ತು ವಿಳಾಸ ತಿಳಿಸುತ್ತೀರಾ?'"
         await session.send_realtime_input(text=welcome_prompt)
 
         ws_lock = asyncio.Lock()
@@ -166,14 +201,19 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
             async with ws_lock:
                 await websocket.send_text(json.dumps(msg))
 
+        turn_chunks_sent = 0
+
         async def twilio_audio_sender():
-            """Worker that drains the audio queue and streams 20ms chunks to Twilio smoothly."""
+            """Worker that drains the audio queue with drift-compensated 40ms timing and initial buffer priming."""
+            nonlocal last_audio_sent_time, turn_chunks_sent
             chunks_sent = 0
+            next_send_time = time.perf_counter()
             try:
                 while is_session_active:
                     mulaw_chunk = await outbound_audio_queue.get()
                     if mulaw_chunk is None:
                         break
+                    
                     payload = base64.b64encode(mulaw_chunk).decode("utf-8")
                     msg = {
                         "event": "media",
@@ -182,18 +222,34 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
                     }
                     await send_ws(msg)
                     chunks_sent += 1
-                    await asyncio.sleep(0.018) # 20ms packet pacing
+                    turn_chunks_sent += 1
+                    last_audio_sent_time = time.perf_counter()
+                    
+                    chunk_duration = len(mulaw_chunk) / 8000.0
+                    now = time.perf_counter()
+
+                    # Prime Twilio's jitter buffer with first 3 chunks (120ms) instantly to prevent buffer underflow
+                    if turn_chunks_sent <= 3:
+                        next_send_time = now
+                    else:
+                        if next_send_time < now - 0.1:
+                            next_send_time = now
+                        next_send_time += chunk_duration
+                        sleep_dur = next_send_time - time.perf_counter()
+                        if sleep_dur > 0.002:
+                            await asyncio.sleep(sleep_dur)
+                    
                     outbound_audio_queue.task_done()
             except asyncio.CancelledError:
                 pass
             except Exception as e:
                 logger.error(f"[Twilio Sender] Worker error: {e}")
             finally:
-                logger.info(f"[Twilio Sender] Finished. Total chunks sent to caller: {chunks_sent} ({chunks_sent * 0.02:.2f}s audio)")
+                logger.info(f"[Twilio Sender] Finished. Total chunks sent to caller: {chunks_sent}")
 
         async def gemini_to_twilio():
             """Continuously receives audio and tool calls from Gemini Live across all conversational turns."""
-            nonlocal is_session_active, is_greeting_playing
+            nonlocal is_session_active, is_greeting_playing, is_model_generating, is_resolving_tool, is_waiting_for_model_turn, is_order_placed, turn_chunks_sent
             try:
                 while is_session_active:
                     async for response in session.receive():
@@ -201,28 +257,43 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
                         if sc is not None:
                             # Built-in acoustic barge-in from Gemini
                             if sc.interrupted:
-                                logger.info("[Gemini Live] Caller interrupted / barge-in. Clearing Twilio buffer.")
-                                while not outbound_audio_queue.empty():
-                                    try:
-                                        outbound_audio_queue.get_nowait()
-                                        outbound_audio_queue.task_done()
-                                    except Exception:
-                                        break
-                                await send_ws({"event": "clear", "streamSid": stream_sid})
+                                if is_order_placed:
+                                    logger.info("[Gemini Live] Order confirmation active: ignoring barge-in to guarantee full confirmation playback.")
+                                else:
+                                    now = time.perf_counter()
+                                    if (now - last_loud_speech_time) <= 0.8:
+                                        logger.info(f"[Gemini Live] Legitimate caller barge-in detected. Clearing queue ({outbound_audio_queue.qsize()} chunks).")
+                                        while not outbound_audio_queue.empty():
+                                            try:
+                                                outbound_audio_queue.get_nowait()
+                                                outbound_audio_queue.task_done()
+                                            except Exception:
+                                                break
+                                        await send_ws({"event": "clear", "streamSid": stream_sid})
+                                        is_model_generating = False
+                                        turn_chunks_sent = 0
+                                    else:
+                                        logger.info("[Gemini Live] Dropping false barge-in trigger (no recent loud caller speech). Keeping audio queue intact.")
 
                             model_turn = sc.model_turn
                             if model_turn is not None:
+                                is_waiting_for_model_turn = False
                                 for part in model_turn.parts:
                                     if part.text:
                                         logger.info(f"Priya: {part.text}")
                                     if part.inline_data and part.inline_data.data:
+                                        is_model_generating = True
                                         mulaw_bytes = pcm24k_to_mulaw8k(part.inline_data.data)
-                                        chunk_size = 160
+                                        # Use 40ms chunks (320 bytes at 8kHz mu-law) for smooth streaming
+                                        chunk_size = 320
                                         for i in range(0, len(mulaw_bytes), chunk_size):
                                             chunk = mulaw_bytes[i:i + chunk_size]
                                             await outbound_audio_queue.put(chunk)
 
                             if sc.turn_complete:
+                                is_model_generating = False
+                                is_waiting_for_model_turn = False
+                                turn_chunks_sent = 0
                                 if is_greeting_playing:
                                     is_greeting_playing = False
                                     logger.info("[Gemini Live] Welcome greeting finished generation. Now actively streaming and listening for caller orders!")
@@ -231,29 +302,41 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
 
                         # Handle Tool Calling (search catalog, place order, register)
                         if response.tool_call:
-                            for call in response.tool_call.function_calls:
-                                logger.info(f"[Tool Call] {call.name} args: {call.args}")
-                                res = execute_tool_call(call.name, call.args, default_phone=caller_phone)
-                                logger.info(f"[Tool Result] {res}")
-                                if isinstance(res, str):
-                                    try:
-                                        res_dict = json.loads(res)
-                                    except Exception:
-                                        res_dict = {"result": res}
-                                elif isinstance(res, dict):
-                                    res_dict = res
-                                else:
-                                    res_dict = {"result": str(res)}
+                            is_resolving_tool = True
+                            is_waiting_for_model_turn = True
+                            try:
+                                function_responses = []
+                                for call in response.tool_call.function_calls:
+                                    logger.info(f"[Tool Call] {call.name} args: {call.args}")
+                                    if call.name == "place_order":
+                                        is_order_placed = True
+                                    res = execute_tool_call(call.name, call.args, default_phone=caller_phone)
+                                    logger.info(f"[Tool Result] {res}")
+                                    if isinstance(res, str):
+                                        try:
+                                            res_dict = json.loads(res)
+                                        except Exception:
+                                            res_dict = {"result": res}
+                                    elif isinstance(res, dict):
+                                        res_dict = res
+                                    else:
+                                        res_dict = {"result": str(res)}
 
-                                await session.send_tool_response(
-                                    function_responses=[
+                                    function_responses.append(
                                         types.FunctionResponse(
                                             name=call.name,
                                             id=call.id,
                                             response=res_dict
                                         )
-                                    ]
-                                )
+                                    )
+
+                                if function_responses:
+                                    await session.send_tool_response(function_responses=function_responses)
+                                    logger.info(f"[Gemini Live] Sent {len(function_responses)} tool responses to Gemini session.")
+                            except Exception as tool_err:
+                                logger.error(f"[Gemini Live] Tool execution error: {tool_err}", exc_info=True)
+                            finally:
+                                is_resolving_tool = False
             except asyncio.CancelledError:
                 pass
             except Exception as e:
@@ -263,10 +346,11 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
                 is_session_active = False
 
         async def twilio_to_gemini():
-            """Batches incoming Twilio audio (100ms chunks) and sends to Gemini via media= Blob."""
-            nonlocal is_session_active, is_greeting_playing
+            """Batches incoming Twilio audio (100ms chunks) and sends to Gemini via media= Blob with robust echo suppression."""
+            nonlocal is_session_active, is_greeting_playing, last_loud_speech_time
             buffer_16k = []
             frames_forwarded = 0
+            frames_suppressed = 0
             try:
                 while is_session_active:
                     raw_msg = await websocket.receive_text()
@@ -274,6 +358,15 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
                     event_type = data.get("event")
 
                     if event_type == "media":
+                        # Discard first 1.0s to avoid DTMF trial remnants
+                        now = time.perf_counter()
+                        if (now - stream_start_time) < 1.0:
+                            continue
+
+                        # Gate incoming audio while tool calls are resolving or waiting for model turn
+                        if is_resolving_tool or is_waiting_for_model_turn:
+                            continue
+
                         payload = data["media"]["payload"]
                         mulaw_bytes = base64.b64decode(payload)
                         # Decode 8k mu-law -> float32 -> resample to 16k
@@ -285,13 +378,29 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
                         if len(buffer_16k) >= 5:
                             combined = np.concatenate(buffer_16k)
                             buffer_16k.clear()
+
+                            # If bot is active (generating speech, playing audio to caller, or speaker sound still echoing):
+                            # Suppress microphone sound so Gemini Live never hears its own voice.
+                            # Only allow intentional, loud human barge-in (RMS >= 0.18)
+                            rms = float(np.sqrt(np.mean(combined ** 2)))
+                            if is_bot_active():
+                                if is_order_placed or rms < 0.18:
+                                    frames_suppressed += 1
+                                    continue
+                                else:
+                                    last_loud_speech_time = time.perf_counter()
+                                    logger.info(f"[Echo Gate] Loud user speech detected during bot playback (RMS: {rms:.4f})")
+                            else:
+                                if rms >= 0.18:
+                                    last_loud_speech_time = time.perf_counter()
+
                             pcm16 = (np.clip(combined, -1.0, 1.0) * 32767.0).astype(np.int16).tobytes()
                             await session.send_realtime_input(
                                 media=types.Blob(data=pcm16, mime_type="audio/pcm;rate=16000")
                             )
                             frames_forwarded += 1
-                            if frames_forwarded % 10 == 0:
-                                logger.info(f"[Twilio->Gemini] Forwarded {frames_forwarded * 0.1:.1f}s of caller speech")
+                            if frames_forwarded % 20 == 0:
+                                logger.info(f"[Twilio->Gemini] Forwarded {frames_forwarded * 0.1:.1f}s speech (Echo suppressed: {frames_suppressed * 0.1:.1f}s)")
 
                     elif event_type == "stop":
                         logger.info(f"[Twilio] Caller hung up (stop event received for SID {stream_sid})")
@@ -301,7 +410,7 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
             except Exception as e:
                 logger.error(f"[Twilio-to-Gemini] Loop error: {e}", exc_info=True)
             finally:
-                logger.info(f"[Twilio-to-Gemini] Task ended (total audio forwarded: {frames_forwarded * 0.1:.1f}s).")
+                logger.info(f"[Twilio-to-Gemini] Task ended (total audio forwarded: {frames_forwarded * 0.1:.1f}s, echo suppressed: {frames_suppressed * 0.1:.1f}s).")
                 is_session_active = False
 
         # Run sender worker and both directions concurrently
@@ -322,6 +431,13 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
             exc = t.exception()
             if exc:
                 logger.error(f"[Session] Completed task had error: {exc}", exc_info=True)
+
+        # Allow remaining audio in queue to finish playing to caller before tearing down
+        if not outbound_audio_queue.empty():
+            logger.info(f"[Session] Draining {outbound_audio_queue.qsize()} pending audio chunks before closing...")
+            drain_deadline = time.perf_counter() + 3.0
+            while not outbound_audio_queue.empty() and time.perf_counter() < drain_deadline:
+                await asyncio.sleep(0.05)
 
         is_session_active = False
         await outbound_audio_queue.put(None)

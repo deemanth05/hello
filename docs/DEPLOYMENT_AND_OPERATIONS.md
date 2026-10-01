@@ -118,7 +118,7 @@ Render Free web services spin down after 15 minutes of inactivity. When a phone 
 | Variable | Type | Default Value | Description |
 | :--- | :--- | :--- | :--- |
 | `STORE_NAME` | String | `D mart Express` | Spoken brand name announced by the AI |
-| `STORE_PHONE` | String | `+17744930623` | Store contact number |
+| `STORE_PHONE` | String | `+18554161860` | Store contact number |
 | `MINIMUM_ORDER_VALUE`| Float | `250.0` | Minimum purchase threshold (INR ₹) |
 | `DELIVERY_FEE` | Float | `30.0` | Delivery charge (INR ₹) |
 | `FREE_DELIVERY_THRESHOLD`| Float | `800.0` | Minimum spend for free delivery |

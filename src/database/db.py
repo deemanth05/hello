@@ -100,6 +100,8 @@ def init_db():
             ("+919765432100", "Ananya Iyer", "A-204, Palm Meadows, Whitefield, Bangalore"),
             ("9876543210", "Rahul Sharma", "Flat 402, Sunshine Heights, Mumbai"),
             ("9812345678", "Priya Patel", "House 12, Green Glen Layout, Bangalore"),
+            ("+919008474173", "Vedashree", "Krishna Nagar, Bengaluru"),
+            ("9008474173", "Vedashree", "Krishna Nagar, Bengaluru"),
         ]
 
         # Securely load custom caller profile from private environment variables
@@ -143,8 +145,8 @@ def init_db():
             ("Amul Malai Paneer 200g", "Dairy", 90.0, "200 g", 30),
             ("Britannia 100% Whole Wheat Bread", "Bakery", 45.0, "400 g", 25),
             ("Britannia Milk Bread", "Bakery", 40.0, "400 g", 25),
-            ("Farm Fresh Eggs (Pack of 6)", "Dairy", 50.0, "6 pieces", 50),
-            ("Farm Fresh Eggs (Pack of 12)", "Dairy", 95.0, "12 pieces", 40),
+            ("Farm Fresh Eggs (Pack of 6)", "Eggs", 50.0, "6 pieces", 50),
+            ("Farm Fresh Eggs (Pack of 12)", "Eggs", 95.0, "12 pieces", 40),
             
             # Snacks & Beverages
             ("Maggi 2-Minute Noodles 4-Pack", "Snacks", 56.0, "280 g", 70),
@@ -168,8 +170,12 @@ def init_db():
         ]
         
         cursor.executemany("""
-            INSERT OR IGNORE INTO products (name, category, price, unit, stock_quantity)
+            INSERT INTO products (name, category, price, unit, stock_quantity)
             VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(name) DO UPDATE SET
+                category = excluded.category,
+                price = excluded.price,
+                unit = excluded.unit
         """, catalog)
 
     logger.info(f"DMart database initialized successfully at {settings.DATABASE_PATH}")

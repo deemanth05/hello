@@ -81,7 +81,7 @@ Open `.env` in any text editor and configure:
 ```env
 # Store Configuration
 STORE_NAME="D mart Express"
-STORE_PHONE="+17744930623"
+STORE_PHONE="+18554161860"
 LANGUAGE="kn"
 PORT=8765
 
@@ -91,7 +91,7 @@ GEMINI_API_KEY="AIzaSyYourGeminiApiKeyHere"
 # If using Twilio for real telephone calls:
 TWILIO_ACCOUNT_SID="ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 TWILIO_AUTH_TOKEN="your_auth_token_here"
-TWILIO_PHONE_NUMBER="+17744930623"
+TWILIO_PHONE_NUMBER="+18554161860"
 
 # If using Local AI Mode:
 OLLAMA_HOST="http://localhost:11434"

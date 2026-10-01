@@ -624,7 +624,7 @@
             </span>
             <button class="btn btn-secondary btn-sm" onclick="refreshAllData()">🔄 Refresh</button>
             <button class="btn btn-primary btn-sm" onclick="openModal('modal-manual-order')">+ New Order</button>
-            <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-product')">+ Add Product</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddProduct()">+ Add Product</button>
         </div>
     </header>
 
@@ -760,7 +760,7 @@
                         <h2>Catalog & Real-Time Stock Management</h2>
                         <p>Add new products, adjust inventory quantities, and update supermarket prices</p>
                     </div>
-                    <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-product')">+ Add New Product</button>
+                    <button class="btn btn-primary btn-sm" onclick="openAddProduct()">+ Add New Product</button>
                 </div>
 
                 <div class="filter-row">
@@ -807,7 +807,7 @@
                         <h2>Registered Customer Profiles</h2>
                         <p>Manage pre-registered caller profiles, delivery addresses, and purchase history</p>
                     </div>
-                    <button class="btn btn-primary btn-sm" onclick="openModal('modal-register-customer')">+ Register New Customer</button>
+                    <button class="btn btn-primary btn-sm" onclick="openRegisterCustomer()">+ Register New Customer</button>
                 </div>
 
                 <div class="filter-row">
@@ -1447,6 +1447,14 @@
             }
         }
 
+        function openAddProduct() {
+            const form = document.getElementById('form-product');
+            if (form) form.reset();
+            document.getElementById('prod-id').value = '';
+            document.getElementById('modal-product-title').innerText = "Add New Product";
+            openModal('modal-product');
+        }
+
         function openEditProduct(prodId) {
             const p = allProducts.find(x => x.id === prodId);
             if (!p) return;
@@ -1462,12 +1470,22 @@
 
         async function submitProductForm() {
             const id = document.getElementById('prod-id').value;
+            const name = document.getElementById('prod-name').value.trim();
+            const category = document.getElementById('prod-category').value;
+            const unit = document.getElementById('prod-unit').value.trim();
+            const price = parseFloat(document.getElementById('prod-price').value);
+            const stock = parseInt(document.getElementById('prod-stock').value);
+
+            if (!name) return showToast("Product name is required", "error");
+            if (isNaN(price) || price < 0) return showToast("Valid price is required", "error");
+            if (isNaN(stock) || stock < 0) return showToast("Valid stock quantity is required", "error");
+
             const payload = {
-                name: document.getElementById('prod-name').value,
-                category: document.getElementById('prod-category').value,
-                unit: document.getElementById('prod-unit').value,
-                price: parseFloat(document.getElementById('prod-price').value),
-                stock_quantity: parseInt(document.getElementById('prod-stock').value)
+                name: name,
+                category: category,
+                unit: unit || "1 packet",
+                price: price,
+                stock_quantity: stock
             };
 
             const url = id ? `/api/products/${id}` : '/api/products';
@@ -1481,17 +1499,20 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    showToast(data.message);
+                    showToast(data.message || "Product saved successfully!");
                     closeModal('modal-product');
                     loadProducts();
                     loadStats();
                 } else {
                     showToast(data.error || "Failed to save product", "error");
+                    alert(data.error || "Failed to save product");
                 }
             } catch (err) {
-                showToast("Error saving product", "error");
+                showToast("Error saving product: " + err, "error");
+                alert("Error saving product: " + err);
             }
         }
+
 
         async function deleteProduct(prodId, prodName) {
             if (!confirm(`Are you sure you want to delete '${prodName}' from the catalog?`)) return;
@@ -1546,6 +1567,14 @@
             `).join('');
         }
 
+        function openRegisterCustomer() {
+            const form = document.getElementById('form-customer');
+            if (form) form.reset();
+            document.getElementById('cust-id').value = '';
+            document.getElementById('modal-customer-title').innerText = "Register New Customer";
+            openModal('modal-customer');
+        }
+
         function openEditCustomer(custId) {
             const c = allCustomers.find(x => x.id === custId);
             if (!c) return;
@@ -1559,10 +1588,18 @@
 
         async function submitCustomerForm() {
             const id = document.getElementById('cust-id').value;
+            const phone = document.getElementById('cust-phone').value.trim();
+            const name = document.getElementById('cust-name').value.trim();
+            const address = document.getElementById('cust-address').value.trim();
+
+            if (!phone) return showToast("Phone number is required", "error");
+            if (!name) return showToast("Customer name is required", "error");
+            if (!address) return showToast("Delivery address is required", "error");
+
             const payload = {
-                phone: document.getElementById('cust-phone').value,
-                name: document.getElementById('cust-name').value,
-                address: document.getElementById('cust-address').value
+                phone: phone,
+                name: name,
+                address: address
             };
 
             const url = id ? `/api/customers/${id}` : '/api/customers';
@@ -1582,11 +1619,14 @@
                     loadStats();
                 } else {
                     showToast(data.error || "Failed to save customer", "error");
+                    alert(data.error || "Failed to save customer");
                 }
             } catch (err) {
-                showToast("Error saving customer", "error");
+                showToast("Error saving customer: " + err, "error");
+                alert("Error saving customer: " + err);
             }
         }
+
 
         async function deleteCustomer(custId, custName) {
             if (!confirm(`Delete profile for ${custName}?`)) return;
@@ -1838,21 +1878,42 @@
 
         // Modal Helpers
         function openModal(id) {
-            document.getElementById(id).classList.add('active');
+            if (id === 'modal-add-product') id = 'modal-product';
+            if (id === 'modal-register-customer') id = 'modal-customer';
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.add('active');
+            } else {
+                console.error("Modal not found:", id);
+            }
         }
+
         function closeModal(id) {
-            document.getElementById(id).classList.remove('active');
+            if (id === 'modal-add-product') id = 'modal-product';
+            if (id === 'modal-register-customer') id = 'modal-customer';
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('active');
             if (id === 'modal-product') {
-                document.getElementById('form-product').reset();
+                const form = document.getElementById('form-product');
+                if (form) form.reset();
                 document.getElementById('prod-id').value = '';
                 document.getElementById('modal-product-title').innerText = "Add New Product";
             }
             if (id === 'modal-customer') {
-                document.getElementById('form-customer').reset();
+                const form = document.getElementById('form-customer');
+                if (form) form.reset();
                 document.getElementById('cust-id').value = '';
                 document.getElementById('modal-customer-title').innerText = "Register New Customer";
             }
         }
+
+        // Close any modal when user clicks outside the modal dialog
+        document.addEventListener('click', (e) => {
+            if (e.target.classList && e.target.classList.contains('modal-overlay')) {
+                closeModal(e.target.id);
+            }
+        });
+
     </script>
 </body>
 </html>

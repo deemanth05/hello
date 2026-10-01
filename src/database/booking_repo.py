@@ -314,25 +314,44 @@ def create_store_order(
             if qty <= 0:
                 qty = 1
             
-            # Step 1: Match product by tokens (excluding pure numbers/units)
+            product = None
+            prod_id = it.get("product_id") or it.get("id")
+            if prod_id:
+                cursor.execute("SELECT id, name, price, unit, stock_quantity FROM products WHERE id = ?", (prod_id,))
+                product = cursor.fetchone()
+
+            # Step 1: Exact match by name
+            if not product and p_name:
+                cursor.execute("SELECT id, name, price, unit, stock_quantity FROM products WHERE LOWER(name) = LOWER(?) LIMIT 1", (p_name,))
+                product = cursor.fetchone()
+
+            # Step 2: Match product by tokens (excluding pure numbers/units) with ranked relevance
             raw_tokens = p_name.split()
             significant_tokens = [t for t in raw_tokens if len(t) > 1 and not t.isdigit() and t.lower() not in {"liter", "litre", "1l", "1kg", "kg", "packet", "pack"}]
-            
-            product = None
-            if significant_tokens:
+            if not product and significant_tokens:
                 token_query = " AND ".join(["LOWER(name) LIKE ?" for _ in significant_tokens])
                 token_params = [f"%{t.lower()}%" for t in significant_tokens]
-                cursor.execute(f"SELECT id, name, price, unit, stock_quantity FROM products WHERE {token_query} LIMIT 1", token_params)
+                cursor.execute(f"""
+                    SELECT id, name, price, unit, stock_quantity FROM products 
+                    WHERE {token_query} 
+                    ORDER BY 
+                        CASE 
+                            WHEN LOWER(name) = LOWER(?) THEN 1
+                            WHEN LOWER(name) LIKE ? THEN 2
+                            ELSE 3
+                        END, id ASC 
+                    LIMIT 1
+                """, token_params + [p_name.lower(), f"%{p_name.lower()}%"])
                 product = cursor.fetchone()
             
-            # Step 2: Semantic search fallback (resolves Kannada terms like 'ಹಾಲು', 'ಸಕ್ಕರೆ', 'ಅಕ್ಕಿ', etc.)
+            # Step 3: Semantic search fallback (resolves Kannada terms like 'ಹಾಲು', 'ಸಕ್ಕರೆ', 'ಅಕ್ಕಿ', etc.)
             if not product:
                 matches = search_products(p_name)
                 if matches:
                     cursor.execute("SELECT id, name, price, unit, stock_quantity FROM products WHERE id = ?", (matches[0]["id"],))
                     product = cursor.fetchone()
 
-            # Step 3: Loose OR fallback with significant tokens only
+            # Step 4: Loose OR fallback with significant tokens only
             if not product and len(significant_tokens) > 1:
                 token_or = " OR ".join(["LOWER(name) LIKE ?" for _ in significant_tokens])
                 cursor.execute(f"SELECT id, name, price, unit, stock_quantity FROM products WHERE {token_or} ORDER BY stock_quantity DESC LIMIT 1", [f"%{t.lower()}%" for t in significant_tokens])

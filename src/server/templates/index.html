@@ -514,64 +514,6 @@
             gap: 0.75rem;
         }
 
-        /* Interactive Playground */
-        .chat-box {
-            display: flex;
-            flex-direction: column;
-            height: 520px;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            background: #f8fafc;
-            overflow: hidden;
-        }
-
-        .chat-stream {
-            flex: 1;
-            padding: 1.25rem;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 0.85rem;
-        }
-
-        .chat-bubble {
-            max-width: 80%;
-            padding: 0.75rem 1rem;
-            border-radius: 14px;
-            font-size: 0.9rem;
-            line-height: 1.5;
-        }
-
-        .bubble-bot {
-            align-self: flex-start;
-            background: #ffffff;
-            border: 1px solid var(--border);
-            color: var(--dark);
-            border-bottom-left-radius: 2px;
-        }
-
-        .bubble-user {
-            align-self: flex-end;
-            background: var(--primary);
-            color: white;
-            border-bottom-right-radius: 2px;
-        }
-
-        .bubble-meta {
-            font-size: 0.72rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-            opacity: 0.8;
-        }
-
-        .chat-input-row {
-            padding: 0.85rem 1rem;
-            background: white;
-            border-top: 1px solid var(--border);
-            display: flex;
-            gap: 0.5rem;
-        }
-
         /* Toast Notifications */
         #toast-container {
             position: fixed;
@@ -649,9 +591,6 @@
             <button class="nav-btn" onclick="switchTab('tab-calls')">
                 <span>📞 Telephony & Call Logs</span>
                 <span class="nav-counter" id="badge-calls-count">0</span>
-            </button>
-            <button class="nav-btn" onclick="switchTab('tab-playground')">
-                <span>🤖 Priya AI Playground</span>
             </button>
         </div>
 
@@ -924,49 +863,6 @@
                             <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Loading call logs...</td></tr>
                         </tbody>
                     </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ================= TAB 6: PRIYA PLAYGROUND ================= -->
-        <div id="tab-playground" class="tab-pane">
-            <div class="panel">
-                <div class="panel-header">
-                    <div>
-                        <h2>Priya Voice AI Playground</h2>
-                        <p>Interactive web testing interface backed by cloud Gemini API</p>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-                    <label style="font-size: 0.85rem; font-weight: 600;">Test As Caller Profile:</label>
-                    <select id="chat-caller-select" class="form-control" style="width: auto; min-width: 250px;">
-                        <option value="+919008474173">Vedashree (+919008474173)</option>
-                        <option value="+919876543210">Rahul Sharma (+919876543210)</option>
-                        <option value="+919812345678">Priya Patel (+919812345678)</option>
-                        <option value="+919999999999">New Caller (+919999999999)</option>
-                    </select>
-                </div>
-
-                <div class="chat-box">
-                    <div class="chat-stream" id="chat-stream">
-                        <div class="chat-bubble bubble-bot">
-                            <div class="bubble-meta">Priya (AI Assistant)</div>
-                            <div>ನಮಸ್ಕಾರ! DMart Express ಗೆ ಸ್ವಾಗತ. ನಿಮಗೆ ಇಂದು ಯಾವ ದಿನಸಿ ಸಾಮಗ್ರಿಗಳು ಬೇಕು? (Type below to test ordering or searching items in Kannada or English!)</div>
-                        </div>
-                    </div>
-
-                    <div style="padding: 0.5rem 1rem; background: white; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; overflow-x: auto;">
-                        <span class="pill" onclick="sendChatMessage('ಹಾಲು ಮತ್ತು ಬ್ರೆಡ್ ಬೇಕು')">🥛 ಹಾಲು ಮತ್ತು ಬ್ರೆಡ್</span>
-                        <span class="pill" onclick="sendChatMessage('1 ಲೀಟರ್ ಎಣ್ಣೆ ಮತ್ತು 1 ಕೆಜಿ ಸಕ್ಕರೆ')">🌻 ಎಣ್ಣೆ & ಸಕ್ಕರೆ</span>
-                        <span class="pill" onclick="sendChatMessage('ಚಹಾ ಪುಡಿ ಮತ್ತು ಬಿಸ್ಕತ್ತು')">☕ ಚಹಾ & ಬಿಸ್ಕತ್ತು</span>
-                        <span class="pill" onclick="sendChatMessage('ಆರ್ಡರ್ ಕನ್ಫರ್ಮ್ ಮಾಡಿ')">✅ ಆರ್ಡರ್ ಖಚಿತಪಡಿಸಿ</span>
-                    </div>
-
-                    <div class="chat-input-row">
-                        <input type="text" id="chat-user-input" class="form-control" placeholder="Type a message (e.g. 1L amul milk beku)..." onkeydown="if(event.key==='Enter') submitChatMessage()">
-                        <button class="btn btn-primary" onclick="submitChatMessage()">Send ➤</button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1820,59 +1716,6 @@
                 }
             } catch (err) {
                 showToast("Error creating order", "error");
-            }
-        }
-
-        // ================= 8. PRIYA PLAYGROUND =================
-        async function submitChatMessage() {
-            const input = document.getElementById('chat-user-input');
-            const msg = input.value.trim();
-            if (!msg) return;
-            input.value = '';
-            await sendChatMessage(msg);
-        }
-
-        async function sendChatMessage(msg) {
-            const phone = document.getElementById('chat-caller-select').value;
-            const stream = document.getElementById('chat-stream');
-
-            // Append user bubble
-            const uBubble = document.createElement('div');
-            uBubble.className = 'chat-bubble bubble-user';
-            uBubble.innerHTML = `<div class="bubble-meta">You</div><div>${msg}</div>`;
-            stream.appendChild(uBubble);
-            stream.scrollTop = stream.scrollHeight;
-
-            // Send to test turn
-            try {
-                const res = await fetch('/api/test/chat', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ caller_phone: phone, message: msg })
-                });
-                const data = await res.json();
-                
-                const bBubble = document.createElement('div');
-                bBubble.className = 'chat-bubble bubble-bot';
-                let toolsHtml = '';
-                if (data.tools && data.tools.length) {
-                    toolsHtml = `<div style="font-size: 0.75rem; background: #e2e8f0; padding: 0.3rem 0.6rem; border-radius: 4px; margin-bottom: 0.4rem;">🛠️ Tools Executed: ${data.tools.map(t => t.name).join(', ')}</div>`;
-                }
-                bBubble.innerHTML = `<div class="bubble-meta">Priya</div>${toolsHtml}<div>${data.reply || 'No response'}</div>`;
-                stream.appendChild(bBubble);
-                stream.scrollTop = stream.scrollHeight;
-
-                // If an order or customer change happened, refresh data
-                if (data.tools && data.tools.some(t => t.name === 'place_order' || t.name === 'register_caller')) {
-                    loadOrders();
-                    loadCustomers();
-                    loadStats();
-                }
-            } catch (err) {
-                const errBubble = document.createElement('div');
-                errBubble.className = 'chat-bubble bubble-bot';
-                errBubble.innerHTML = `<div class="bubble-meta">Error</div><div>Network error: ${err}</div>`;
-                stream.appendChild(errBubble);
             }
         }
 

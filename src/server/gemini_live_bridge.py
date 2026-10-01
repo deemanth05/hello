@@ -79,7 +79,8 @@ GEMINI_TOOLS = [
 
 def build_gemini_instruction(caller_phone: str) -> str:
     cust = get_customer(caller_phone)
-    store_name = settings.STORE_NAME
+    from src.database.settings_repo import get_setting
+    store_name = get_setting("store_name", settings.STORE_NAME)
     if cust:
         return f"""You are 'Priya', the AI phone grocery assistant for {store_name} in Bengaluru, Karnataka.
 You speak natural spoken Kannada (ಕನ್ನಡ) and English.
@@ -182,6 +183,11 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
 
     cust = get_customer(caller_phone)
     cust_name = cust['name'] if cust else "ಸರ್"
+    from src.database.settings_repo import get_setting
+    from src.database.call_log_repo import log_call_start, log_call_end
+    store_name = get_setting("store_name", settings.STORE_NAME)
+    created_order_id = None
+    log_call_start(call_sid=call_sid or stream_sid, caller_phone=caller_phone, customer_name=cust['name'] if cust else "Caller")
 
     is_greeting_playing = True
 
@@ -190,9 +196,9 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
         
         # Trigger Gemini to speak welcome greeting natively in real-time mode
         if cust:
-            welcome_prompt = f"Please speak the welcome greeting in natural spoken Kannada: 'ನಮಸ್ಕಾರ {cust_name}, D mart Express ಗೆ ಸ್ವಾಗತ! ನಿಮಗೆ ಇಂದು ಯಾವ ದಿನಸಿ ಸಾಮಗ್ರಿಗಳು ಬೇಕು?'"
+            welcome_prompt = f"Please speak the welcome greeting in natural spoken Kannada: 'ನಮಸ್ಕಾರ {cust_name}, {store_name} ಗೆ ಸ್ವಾಗತ! ನಿಮಗೆ ಇಂದು ಯಾವ ದಿನಸಿ ಸಾಮಗ್ರಿಗಳು ಬೇಕು?'"
         else:
-            welcome_prompt = f"Please speak the welcome greeting in natural spoken Kannada asking for registration: 'ನಮಸ್ಕಾರ! D mart Express ಗೆ ಸ್ವಾಗತ. ನಿಮ್ಮ ಮೊಬೈಲ್ ನಂಬರ್ ನೋಂದಣಿ ಆಗಿಲ್ಲ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಹೆಸರು ಮತ್ತು ವಿಳಾಸ ತಿಳಿಸುತ್ತೀರಾ?'"
+            welcome_prompt = f"Please speak the welcome greeting in natural spoken Kannada asking for registration: 'ನಮಸ್ಕಾರ! {store_name} ಗೆ ಸ್ವಾಗತ. ನಿಮ್ಮ ಮೊಬೈಲ್ ನಂಬರ್ ನೋಂದಣಿ ಆಗಿಲ್ಲ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಹೆಸರು ಮತ್ತು ವಿಳಾಸ ತಿಳಿಸುತ್ತೀರಾ?'"
         await session.send_realtime_input(text=welcome_prompt)
 
         ws_lock = asyncio.Lock()
@@ -312,6 +318,16 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
                                         is_order_placed = True
                                     res = execute_tool_call(call.name, call.args, default_phone=caller_phone)
                                     logger.info(f"[Tool Result] {res}")
+                                    if call.name == "place_order":
+                                        if isinstance(res, dict) and res.get("order_id"):
+                                            created_order_id = res["order_id"]
+                                        elif isinstance(res, str):
+                                            try:
+                                                r_json = json.loads(res)
+                                                if r_json.get("order_id"):
+                                                    created_order_id = r_json["order_id"]
+                                            except Exception:
+                                                pass
                                     if isinstance(res, str):
                                         try:
                                             res_dict = json.loads(res)
@@ -446,3 +462,14 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
             p.cancel()
 
         logger.info(f"[Gemini Live] Session cleanly finished for {caller_phone}.")
+        try:
+            duration = int(time.perf_counter() - stream_start_time)
+            log_call_end(
+                call_sid=call_sid or stream_sid,
+                status="COMPLETED",
+                duration_seconds=duration,
+                order_id=created_order_id,
+                summary=f"Order {created_order_id} placed" if created_order_id else "Call completed"
+            )
+        except Exception as log_err:
+            logger.error(f"Error logging call end: {log_err}")

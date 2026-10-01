@@ -10,11 +10,23 @@ from loguru import logger
 from pathlib import Path
 from src.config import settings, BASE_DIR
 from src.database.db import init_db
-from src.database.customer_repo import get_customer, list_all_customers, register_customer
-from src.database.booking_repo import search_products, get_order_details, list_recent_orders
+from src.database.db import init_db
+from src.database.customer_repo import (
+    get_customer, list_all_customers, register_customer,
+    update_customer, delete_customer, get_customer_orders_by_phone
+)
+from src.database.booking_repo import (
+    search_products, get_order_details, list_recent_orders,
+    add_product, update_product, delete_product, update_product_stock,
+    update_order_status, cancel_order, get_dashboard_stats, place_order
+)
+from src.database.settings_repo import (
+    get_all_settings, get_setting, update_settings, update_setting
+)
+from src.database.call_log_repo import list_recent_calls
 from src.server.audio_utils import decode_mulaw, resample_audio, wav_bytes_to_mulaw8k
 
-app = FastAPI(title="DMart Express Voice AI Telephony Server", version="2.0.0")
+app = FastAPI(title="DMart Express Voice AI Telephony & Management Server", version="2.5.0")
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 sim_sessions = {}
@@ -44,79 +56,248 @@ async def serve_dashboard():
 
 @app.get("/health")
 async def health():
+    store_name = get_setting("store_name", settings.STORE_NAME)
     return {
         "status": "healthy",
-        "store": settings.STORE_NAME,
+        "store": store_name,
         "model": "gemini-2.5-flash-native-audio-latest" if settings.GEMINI_API_KEY else settings.OLLAMA_MODEL
     }
 
-@app.get("/api/customers")
-async def api_customers():
-    return {"customers": list_all_customers()}
+# ----------------- DASHBOARD & STORE SETTINGS -----------------
+
+@app.get("/api/dashboard/stats")
+async def api_dashboard_stats():
+    """Returns aggregated real-time store stats (revenue, orders today, low stock)."""
+    return get_dashboard_stats()
+
+@app.get("/api/settings")
+async def api_get_settings():
+    """Returns all configurable store settings."""
+    return get_all_settings()
+
+@app.put("/api/settings")
+async def api_update_settings(data: dict):
+    """Updates store settings (e.g. store_name, phone, delivery_fee)."""
+    update_settings(data)
+    return {"success": True, "message": "Settings updated successfully.", "data": get_all_settings()}
+
+# ----------------- PRODUCTS & INVENTORY CRUD -----------------
 
 @app.get("/api/products")
-async def api_products(query: str = ""):
-    return {"products": search_products(query)}
+async def api_products(query: str = "", category: str = "", low_stock: bool = False):
+    """Search/filter products in the catalog."""
+    return {"products": search_products(query=query, category=category, low_stock_only=low_stock)}
+
+@app.post("/api/products")
+async def api_create_product(data: dict):
+    """Add a new product to the supermarket catalog."""
+    res = add_product(
+        name=data.get("name", ""),
+        category=data.get("category", "Groceries"),
+        price=float(data.get("price", 0)),
+        unit=data.get("unit", "1 packet"),
+        stock_quantity=int(data.get("stock_quantity", 50))
+    )
+    return res
+
+@app.put("/api/products/{product_id}")
+async def api_update_product(product_id: int, data: dict):
+    """Update product details (name, category, price, unit, stock)."""
+    return update_product(
+        product_id=product_id,
+        name=data.get("name", ""),
+        category=data.get("category", "Groceries"),
+        price=float(data.get("price", 0)),
+        unit=data.get("unit", "1 packet"),
+        stock_quantity=int(data.get("stock_quantity", 0))
+    )
+
+@app.delete("/api/products/{product_id}")
+async def api_delete_product(product_id: int):
+    """Delete a product from the catalog."""
+    return delete_product(product_id)
+
+@app.patch("/api/products/{product_id}/stock")
+async def api_patch_stock(product_id: int, data: dict):
+    """Quick increment or decrement of product inventory."""
+    delta = int(data.get("delta", 0))
+    return update_product_stock(product_id, delta)
+
+# ----------------- CUSTOMER REGISTRY CRUD -----------------
+
+@app.get("/api/customers")
+async def api_customers(query: str = ""):
+    """List registered customers with optional search."""
+    return {"customers": list_all_customers(query=query)}
+
+@app.post("/api/customers")
+@app.post("/api/register")
+async def api_register(data: dict):
+    """Register or update a customer profile."""
+    phone = data.get("phone") or data.get("phone_number", "")
+    name = data.get("name", "")
+    address = data.get("address", "")
+    return register_customer(phone_number=phone, name=name, address=address)
+
+@app.put("/api/customers/{customer_id}")
+async def api_update_customer(customer_id: int, data: dict):
+    """Edit an existing customer's name, phone, or address."""
+    phone = data.get("phone") or data.get("phone_number", "")
+    name = data.get("name", "")
+    address = data.get("address", "")
+    return update_customer(customer_id=customer_id, phone_number=phone, name=name, address=address)
+
+@app.delete("/api/customers/{customer_id}")
+async def api_delete_customer(customer_id: int):
+    """Delete a customer profile."""
+    return delete_customer(customer_id)
+
+@app.get("/api/customers/{customer_id}/orders")
+async def api_customer_orders(customer_id: int):
+    """Retrieve all past orders placed by this customer."""
+    customers = list_all_customers()
+    target = next((c for c in customers if c["id"] == customer_id), None)
+    if not target:
+        return {"orders": []}
+    return {"orders": get_customer_orders_by_phone(target["phone_number"])}
+
+# ----------------- ORDERS MANAGEMENT -----------------
 
 @app.get("/api/orders")
-async def api_list_orders():
-    return {"orders": list_recent_orders()}
+async def api_list_orders(status: str = "", limit: int = 50):
+    """List recent customer orders."""
+    return {"orders": list_recent_orders(limit=limit, status_filter=status)}
 
 @app.get("/api/orders/{order_id}")
 async def api_order(order_id: str):
+    """Fetch order details and line items."""
     return get_order_details(order_id)
 
-@app.post("/api/register")
-async def api_register(data: dict):
-    phone = data.get("phone", "")
-    name = data.get("name", "")
-    address = data.get("address", "")
-    res = register_customer(phone_number=phone, name=name, address=address)
-    return res
+@app.post("/api/orders")
+async def api_create_order(data: dict):
+    """Manually place an order from the dashboard for a walk-in or manual caller."""
+    return place_order(
+        customer_phone=data.get("customer_phone", ""),
+        customer_name=data.get("customer_name", "Walk-in Customer"),
+        delivery_type=data.get("delivery_type", "delivery"),
+        delivery_address=data.get("delivery_address", ""),
+        items=data.get("items", [])
+    )
+
+@app.patch("/api/orders/{order_id}/status")
+async def api_update_order_status(order_id: str, data: dict):
+    """Progress order status (CONFIRMED -> PREPARING -> OUT_FOR_DELIVERY -> DELIVERED -> CANCELLED)."""
+    status = data.get("status", "")
+    return update_order_status(order_id, status)
+
+@app.post("/api/orders/{order_id}/cancel")
+async def api_cancel_order(order_id: str):
+    """Cancel order and automatically restore stock to catalog."""
+    return cancel_order(order_id)
+
+# ----------------- TELEPHONY & CALL LOGS -----------------
+
+@app.get("/api/calls")
+async def api_calls(limit: int = 50):
+    """List recent incoming phone calls."""
+    return {"calls": list_recent_calls(limit=limit)}
+
+# ----------------- ASSISTANT PLAYGROUND & SIMULATOR -----------------
+
+@app.post("/api/test/chat")
+async def api_test_chat(data: dict):
+    """
+    Browser assistant test: works in all environments (Render cloud & local).
+    Uses Gemini API with full tool calling if key is present, else falls back cleanly.
+    """
+    caller_phone = data.get("caller_phone", "+919876543210")
+    message = data.get("message", "").strip()
+    if not message:
+        return {"success": False, "reply": "Please enter a message."}
+        
+    if settings.GEMINI_API_KEY:
+        try:
+            from google import genai
+            from google.genai import types
+            from src.server.gemini_live_bridge import GEMINI_TOOLS, build_gemini_instruction, execute_tool_call
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            instruction = build_gemini_instruction(caller_phone)
+            
+            resp = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=message,
+                config=types.GenerateContentConfig(
+                    system_instruction=instruction,
+                    tools=GEMINI_TOOLS,
+                    temperature=0.3
+                )
+            )
+            
+            reply_text = resp.text or ""
+            executed_tools = []
+            if resp.function_calls:
+                for call in resp.function_calls:
+                    t_res = execute_tool_call(call.name, dict(call.args), default_phone=caller_phone)
+                    executed_tools.append({"name": call.name, "result": t_res})
+                    
+                # If model only called functions without text, get natural language follow-up
+                if not reply_text:
+                    followup_prompt = f"Tools executed: {executed_tools}. Respond to the customer warmly in Kannada based on these results."
+                    f_resp = client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=followup_prompt,
+                        config=types.GenerateContentConfig(system_instruction=instruction, temperature=0.3)
+                    )
+                    reply_text = f_resp.text or "ಆರ್ಡರ್ ಪ್ರಕ್ರಿಯೆ ಪೂರ್ಣಗೊಂಡಿದೆ."
+                    
+            return {"success": True, "reply": reply_text, "tools": executed_tools}
+        except Exception as e:
+            logger.error(f"Gemini test chat error: {e}", exc_info=True)
+            return {"success": False, "reply": f"Gemini error: {str(e)}"}
+    else:
+        if bot_pipeline:
+            pipeline = sim_sessions.get(caller_phone)
+            if not pipeline:
+                from src.pipeline.bot_pipeline import VoiceBotPipeline
+                pipeline = VoiceBotPipeline(
+                    caller_phone=caller_phone,
+                    stt_service=bot_pipeline.stt,
+                    llm_service=bot_pipeline.llm,
+                    tts_service=bot_pipeline.tts
+                )
+                sim_sessions[caller_phone] = pipeline
+                pipeline.set_caller(caller_phone)
+            turn_res = await pipeline.execute_text_turn(message)
+            return {"success": True, "reply": turn_res["reply_text"]}
+        return {"success": True, "reply": f"Echo test: {message}"}
 
 @app.post("/api/simulate/call")
 async def api_simulate_call(data: dict):
-    from src.pipeline.bot_pipeline import VoiceBotPipeline
     phone = data.get("caller_phone", "+919876543210")
-    pipeline = VoiceBotPipeline(
-        caller_phone=phone,
-        stt_service=bot_pipeline.stt if bot_pipeline else None,
-        llm_service=bot_pipeline.llm if bot_pipeline else None,
-        tts_service=bot_pipeline.tts if bot_pipeline else None
-    )
-    sim_sessions[phone] = pipeline
-    greeting_text, greeting_wav = pipeline.set_caller(phone)
     cust = get_customer(phone)
+    store_name = get_setting("store_name", settings.STORE_NAME)
+    if cust:
+        greeting = f"ನಮಸ್ಕಾರ {cust['name']}, {store_name} ಗೆ ಸ್ವಾಗತ! ನಿಮಗೆ ಇಂದು ಯಾವ ದಿನಸಿ ಸಾಮಗ್ರಿಗಳು ಬೇಕು?"
+    else:
+        greeting = f"ನಮಸ್ಕಾರ! {store_name} ಗೆ ಸ್ವಾಗತ. ನಿಮ್ಮ ಮೊಬೈಲ್ ನಂಬರ್ ನೋಂದಣಿ ಆಗಿಲ್ಲ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಹೆಸರು ಮತ್ತು ವಿಳಾಸ ತಿಳಿಸುತ್ತೀರಾ?"
     return {
         "caller_phone": phone,
         "customer": cust,
-        "greeting_text": greeting_text,
-        "audio_base64": base64.b64encode(greeting_wav).decode("utf-8") if greeting_wav else None
+        "greeting_text": greeting,
+        "audio_base64": None
     }
 
 @app.post("/api/simulate/turn")
 async def api_simulate_turn(data: dict):
     phone = data.get("caller_phone", "+919876543210")
     user_text = data.get("text", "")
-    pipeline = sim_sessions.get(phone)
-    if not pipeline:
-        from src.pipeline.bot_pipeline import VoiceBotPipeline
-        pipeline = VoiceBotPipeline(
-            caller_phone=phone,
-            stt_service=bot_pipeline.stt if bot_pipeline else None,
-            llm_service=bot_pipeline.llm if bot_pipeline else None,
-            tts_service=bot_pipeline.tts if bot_pipeline else None
-        )
-        sim_sessions[phone] = pipeline
-        pipeline.set_caller(phone)
-    
-    turn_res = await pipeline.execute_text_turn(user_text)
-    wav_b64 = base64.b64encode(turn_res["wav_bytes"]).decode("utf-8") if turn_res.get("wav_bytes") else None
+    res = await api_test_chat({"caller_phone": phone, "message": user_text})
     return {
-        "transcript": turn_res["transcript"],
-        "reply_text": turn_res["reply_text"],
-        "audio_base64": wav_b64
+        "transcript": user_text,
+        "reply_text": res.get("reply", ""),
+        "audio_base64": None
     }
+
 
 
 @app.api_route("/voice/incoming", methods=["GET", "POST"])

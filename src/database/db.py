@@ -93,7 +93,49 @@ def init_db():
             );
         """)
 
-        # 5. Seed Registered Customers for Testing (Generic Demo Profiles)
+        # 5. Store Settings Table (Dynamic Configuration)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS store_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                description TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+
+        # Seed initial store settings if not already present
+        initial_settings = [
+            ("store_name", getattr(settings, "STORE_NAME", "D mart Express"), "Display name of the supermarket"),
+            ("store_phone", getattr(settings, "STORE_PHONE", "+18554161860"), "Public Twilio store phone number"),
+            ("delivery_fee", str(getattr(settings, "DELIVERY_FEE", 30.0)), "Standard delivery fee in Rupees"),
+            ("free_delivery_threshold", str(getattr(settings, "FREE_DELIVERY_THRESHOLD", 800.0)), "Order amount for free delivery"),
+            ("default_eta_minutes", "40", "Standard delivery ETA in minutes"),
+            ("active_language", "kn", "Primary voice assistant language (kn/en)"),
+            ("welcome_greeting", "ನಮಸ್ಕಾರ, {store_name} ಗೆ ಸ್ವಾಗತ! ನಿಮಗೆ ಇಂದು ಯಾವ ದಿನಸಿ ಸಾಮಗ್ರಿಗಳು ಬೇಕು?", "Spoken greeting template")
+        ]
+        cursor.executemany("""
+            INSERT INTO store_settings (key, value, description)
+            VALUES (?, ?, ?)
+            ON CONFLICT(key) DO NOTHING;
+        """, initial_settings)
+
+        # 6. Call Logs Table (Twilio Telephony Activity)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS call_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                call_sid TEXT UNIQUE NOT NULL,
+                caller_phone TEXT NOT NULL,
+                customer_name TEXT,
+                call_status TEXT DEFAULT 'IN_PROGRESS',
+                duration_seconds INTEGER DEFAULT 0,
+                order_id TEXT,
+                summary TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_call_logs_phone ON call_logs(caller_phone);")
+
+        # 7. Seed Registered Customers for Testing (Generic Demo Profiles)
         test_customers = [
             ("+919876543210", "Rahul Sharma", "Flat 402, Sunshine Heights, Mumbai"),
             ("+919812345678", "Priya Patel", "House 12, Green Glen Layout, Bangalore"),

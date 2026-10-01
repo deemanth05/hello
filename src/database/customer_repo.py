@@ -119,8 +119,94 @@ def update_customer_address(phone_number: str, address: str) -> Dict[str, Any]:
         cursor.execute("UPDATE customers SET address = ? WHERE phone_number = ? OR id = ?", (address.strip(), phone_number, customer["id"]))
     return {"success": True, "message": "Address updated successfully.", "address": address.strip()}
 
-def list_all_customers() -> List[Dict[str, Any]]:
-    """Returns a list of all registered customers."""
+def list_all_customers(query: str = "") -> List[Dict[str, Any]]:
+    """Returns a list of all registered customers with optional search filter."""
+    clean_q = query.strip()
     with get_db_cursor() as cursor:
-        cursor.execute("SELECT id, phone_number, name, address, created_at FROM customers ORDER BY id DESC")
+        if clean_q:
+            like_str = f"%{clean_q}%"
+            cursor.execute("""
+                SELECT id, phone_number, name, address, created_at 
+                FROM customers 
+                WHERE name LIKE ? OR phone_number LIKE ? OR address LIKE ?
+                ORDER BY id DESC
+            """, (like_str, like_str, like_str))
+        else:
+            cursor.execute("SELECT id, phone_number, name, address, created_at FROM customers ORDER BY id DESC")
         return [dict(r) for r in cursor.fetchall()]
+
+def update_customer(customer_id: int, phone_number: str, name: str, address: str) -> Dict[str, Any]:
+    """Updates a customer profile by ID."""
+    clean_name = name.strip()
+    clean_address = address.strip()
+    clean_phone = phone_number.strip()
+    norm = normalize_phone(clean_phone)
+    canonical_phone = f"+91{norm}" if len(norm) == 10 else clean_phone
+
+    if not clean_name:
+        return {"success": False, "error": "Customer name cannot be empty."}
+    if not clean_phone:
+        return {"success": False, "error": "Phone number cannot be empty."}
+
+    with get_db_cursor() as cursor:
+        cursor.execute("SELECT id FROM customers WHERE id = ?", (customer_id,))
+        if not cursor.fetchone():
+            return {"success": False, "error": f"Customer ID {customer_id} not found."}
+
+        cursor.execute("""
+            UPDATE customers
+            SET name = ?, address = ?, phone_number = ?
+            WHERE id = ?
+        """, (clean_name, clean_address, canonical_phone, customer_id))
+    
+    logger.info(f"Updated customer ID {customer_id}: {clean_name} ({canonical_phone})")
+    return {
+        "success": True, 
+        "message": "Customer updated successfully.",
+        "customer": {
+            "id": customer_id,
+            "name": clean_name,
+            "phone_number": canonical_phone,
+            "address": clean_address
+        }
+    }
+
+def delete_customer(customer_id: int) -> Dict[str, Any]:
+    """Deletes a customer profile by ID."""
+    with get_db_cursor() as cursor:
+        cursor.execute("SELECT name, phone_number FROM customers WHERE id = ?", (customer_id,))
+        row = cursor.fetchone()
+        if not row:
+            return {"success": False, "error": f"Customer ID {customer_id} not found."}
+        
+        name = row["name"]
+        phone = row["phone_number"]
+        cursor.execute("DELETE FROM customers WHERE id = ?", (customer_id,))
+        
+    logger.info(f"Deleted customer ID {customer_id}: {name} ({phone})")
+    return {"success": True, "message": f"Customer '{name}' deleted successfully."}
+
+def get_customer_orders_by_phone(phone_number: str) -> List[Dict[str, Any]]:
+    """Retrieve all past orders for a specific customer phone number."""
+    customer = get_customer(phone_number)
+    if not customer:
+        return []
+    
+    clean_p = customer["phone_number"]
+    norm = normalize_phone(clean_p)
+    candidates = list(dict.fromkeys([clean_p, norm, f"+91{norm}" if norm else clean_p]))
+    
+    with get_db_cursor() as cursor:
+        placeholders = ",".join(["?"] * len(candidates))
+        cursor.execute(f"""
+            SELECT order_id, customer_name, customer_phone, total_amount, status, created_at, estimated_delivery_time
+            FROM orders 
+            WHERE customer_phone IN ({placeholders})
+            ORDER BY id DESC
+        """, candidates)
+        orders = [dict(r) for r in cursor.fetchall()]
+        for o in orders:
+            cursor.execute("SELECT product_name, quantity, unit_price, subtotal FROM order_items WHERE order_id = ?", (o["order_id"],))
+            o["items"] = [dict(r) for r in cursor.fetchall()]
+        return orders
+

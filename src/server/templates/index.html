@@ -3,27 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DMart Express - Voice-AI Telephony Dashboard</title>
+    <title>DMart Express - Store Operations & Management Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Kannada:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Kannada:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #059669;
-            --primary-dark: #047857;
-            --primary-light: #d1fae5;
-            --surface: #ffffff;
-            --bg: #f3f4f6;
-            --text-main: #111827;
-            --text-muted: #6b7280;
-            --border: #e5e7eb;
-            --card-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
-            --phone-bg: #1e293b;
+            --primary-hover: #047857;
+            --primary-light: #ecfdf5;
+            --primary-border: #a7f3d0;
+            --secondary: #2563eb;
+            --secondary-light: #eff6ff;
+            --warning: #d97706;
+            --warning-light: #fef3c7;
+            --danger: #dc2626;
+            --danger-light: #fee2e2;
+            --dark: #0f172a;
+            --card-bg: #ffffff;
+            --bg: #f8fafc;
+            --border: #e2e8f0;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'Inter', 'Noto Sans Kannada', sans-serif;
+            font-family: 'Plus Jakarta Sans', 'Noto Sans Kannada', sans-serif;
             background-color: var(--bg);
             color: var(--text-main);
             min-height: 100vh;
@@ -31,230 +43,454 @@
             flex-direction: column;
         }
 
+        /* Top Header */
         header {
             background: #ffffff;
             border-bottom: 1px solid var(--border);
-            padding: 1rem 2rem;
+            padding: 0.85rem 2rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: var(--shadow-sm);
         }
 
-        .brand {
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .brand-icon {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+            font-weight: 800;
+            font-size: 1.2rem;
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+        }
+
+        .brand-title h1 {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .brand-title p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .header-actions {
             display: flex;
             align-items: center;
             gap: 0.75rem;
         }
 
-        .brand-logo {
-            background: var(--primary);
-            color: white;
-            font-weight: 800;
-            font-size: 1.25rem;
-            width: 42px;
-            height: 42px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .brand h1 { font-size: 1.25rem; font-weight: 700; color: #065f46; }
-        .brand p { font-size: 0.8rem; color: var(--text-muted); }
-
-        .system-badges {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-
-        .badge {
+        .status-badge {
             font-size: 0.75rem;
-            padding: 0.25rem 0.6rem;
-            border-radius: 9999px;
             font-weight: 600;
+            padding: 0.35rem 0.75rem;
+            border-radius: 9999px;
             display: inline-flex;
             align-items: center;
-            gap: 0.3rem;
+            gap: 0.4rem;
         }
 
-        .badge-green { background: #d1fae5; color: #065f46; }
-        .badge-blue { background: #dbeafe; color: #1e40af; }
-        .badge-amber { background: #fef3c7; color: #92400e; }
+        .badge-live {
+            background: var(--primary-light);
+            color: var(--primary-hover);
+            border: 1px solid var(--primary-border);
+        }
 
-        .pulse-dot {
+        .badge-pulse {
             width: 8px;
             height: 8px;
             border-radius: 50%;
             background: #10b981;
-            animation: pulse 2s infinite;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-ring 2s infinite;
         }
 
-        @keyframes pulse {
-            0% { transform: scale(0.95); opacity: 0.8; }
-            50% { transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(0.95); opacity: 0.8; }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
 
-        nav.tabs {
-            background: white;
+        /* Navigation Tabs */
+        nav.nav-bar {
+            background: #ffffff;
             border-bottom: 1px solid var(--border);
             padding: 0 2rem;
             display: flex;
-            gap: 1.5rem;
+            align-items: center;
+            justify-content: space-between;
+            overflow-x: auto;
         }
 
-        .tab-btn {
+        .nav-tabs {
+            display: flex;
+            gap: 1.25rem;
+        }
+
+        .nav-btn {
             background: none;
             border: none;
-            padding: 1rem 0.5rem;
+            padding: 1rem 0.25rem;
             font-size: 0.9rem;
             font-weight: 600;
             color: var(--text-muted);
             cursor: pointer;
             border-bottom: 2px solid transparent;
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
         }
 
-        .tab-btn.active {
+        .nav-btn:hover { color: var(--primary); }
+        .nav-btn.active {
             color: var(--primary);
             border-bottom-color: var(--primary);
         }
 
+        .nav-counter {
+            font-size: 0.7rem;
+            background: #e2e8f0;
+            padding: 0.15rem 0.45rem;
+            border-radius: 9999px;
+            color: var(--text-main);
+        }
+
+        .nav-btn.active .nav-counter {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .sync-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Main Container */
         main {
             flex: 1;
-            padding: 2rem;
-            max-width: 1300px;
+            padding: 1.75rem 2rem;
+            max-width: 1400px;
             margin: 0 auto;
             width: 100%;
         }
 
-        .tab-pane { display: none; }
-        .tab-pane.active { display: block; }
-
-        /* Simulator Layout */
-        .simulator-grid {
+        /* KPI Cards Grid */
+        .kpi-grid {
             display: grid;
-            grid-template-columns: 420px 1fr;
-            gap: 2rem;
-            align-items: start;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
         }
 
-        @media (max-width: 900px) {
-            .simulator-grid { grid-template-columns: 1fr; }
-        }
-
-        /* Virtual Phone Box */
-        .phone-card {
-            background: white;
-            border-radius: 24px;
-            padding: 1.5rem;
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+        .kpi-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-md);
             border: 1px solid var(--border);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
 
-        .phone-header {
-            text-align: center;
-            margin-bottom: 1.25rem;
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
         }
 
-        .phone-notch {
-            width: 120px;
-            height: 18px;
-            background: #e2e8f0;
-            border-radius: 999px;
-            margin: 0 auto 1rem;
-        }
-
-        .caller-select-label {
+        .kpi-info h3 {
             font-size: 0.8rem;
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
             color: var(--text-muted);
             margin-bottom: 0.4rem;
-            display: block;
-            text-align: left;
         }
 
-        select.phone-input, input.phone-input {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            font-size: 0.95rem;
-            margin-bottom: 0.75rem;
-            background: #f8fafc;
-            color: var(--text-main);
-            outline: none;
+        .kpi-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--dark);
         }
 
-        select.phone-input:focus, input.phone-input:focus {
-            border-color: var(--primary);
-            background: white;
+        .kpi-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
         }
 
-        .call-controls {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 0.5rem;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 0.85rem;
-            border: none;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 0.95rem;
-            cursor: pointer;
+        .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-md);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
-            transition: all 0.2s;
+            font-size: 1.4rem;
         }
 
-        .btn-call {
-            background: #10b981;
-            color: white;
-        }
-        .btn-call:hover { background: #059669; }
+        .icon-green { background: var(--primary-light); color: var(--primary); }
+        .icon-blue { background: var(--secondary-light); color: var(--secondary); }
+        .icon-amber { background: var(--warning-light); color: var(--warning); }
+        .icon-purple { background: #faf5ff; color: #9333ea; }
 
-        .btn-hangup {
-            background: #ef4444;
-            color: white;
-            display: none;
-        }
-        .btn-hangup:hover { background: #dc2626; }
+        /* Content Panes */
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; animation: fadeIn 0.2s ease-in-out; }
 
-        .call-status-indicator {
-            margin-top: 1rem;
-            padding: 0.75rem;
-            background: #f1f5f9;
-            border-radius: 10px;
-            font-size: 0.85rem;
-            text-align: center;
-            color: var(--text-muted);
-            font-weight: 600;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .call-status-indicator.active {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        /* Chat Area */
-        .chat-container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: var(--card-shadow);
+        /* Generic Panels */
+        .panel {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
             border: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            height: 600px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 1.5rem;
         }
 
-        .chat-header {
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .panel-header h2 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .panel-header p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.6rem 1.1rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+
+        .btn-secondary { background: #f1f5f9; color: var(--text-main); border-color: var(--border); }
+        .btn-secondary:hover { background: #e2e8f0; }
+
+        .btn-danger { background: var(--danger-light); color: var(--danger); border-color: #fca5a5; }
+        .btn-danger:hover { background: #fecaca; }
+
+        .btn-sm { padding: 0.35rem 0.65rem; font-size: 0.78rem; border-radius: 6px; }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+            text-align: left;
+        }
+
+        thead {
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            padding: 0.85rem 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 0.9rem 1rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: #f8fafc; }
+
+        /* Search & Filter Rows */
+        .filter-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            padding: 0.55rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.88rem;
+            min-width: 280px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+        }
+
+        .filter-pills {
+            display: flex;
+            gap: 0.4rem;
+            overflow-x: auto;
+            padding-bottom: 2px;
+        }
+
+        .pill {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 9999px;
+            background: #f1f5f9;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s;
+        }
+
+        .pill:hover { background: #e2e8f0; color: var(--text-main); }
+        .pill.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* Status Tags */
+        .tag {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .tag-confirmed { background: var(--primary-light); color: var(--primary-hover); }
+        .tag-preparing { background: var(--warning-light); color: var(--warning); }
+        .tag-out { background: var(--secondary-light); color: var(--secondary); }
+        .tag-delivered { background: #dcfce7; color: #15803d; }
+        .tag-cancelled { background: var(--danger-light); color: var(--danger); }
+
+        /* Forms & Settings Inputs */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 0.4rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.65rem 0.9rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            outline: none;
+            background: #ffffff;
+            transition: border-color 0.15s;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+        }
+
+        textarea.form-control { min-height: 90px; resize: vertical; }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active { display: flex; animation: fadeIn 0.15s ease-out; }
+
+        .modal {
+            background: white;
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 540px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .modal-header {
             padding: 1.25rem 1.5rem;
             border-bottom: 1px solid var(--border);
             display: flex;
@@ -262,616 +498,1360 @@
             justify-content: space-between;
         }
 
-        .chat-header h3 { font-size: 1.05rem; font-weight: 700; }
-
-        .chat-messages {
-            flex: 1;
-            padding: 1.5rem;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
+        .modal-header h3 { font-size: 1.1rem; font-weight: 700; color: var(--dark); }
+        .modal-close {
+            background: none; border: none; font-size: 1.25rem;
+            color: var(--text-muted); cursor: pointer;
         }
 
-        .msg-bubble {
-            max-width: 80%;
-            padding: 0.85rem 1.15rem;
-            border-radius: 16px;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            position: relative;
-        }
-
-        .msg-ai {
-            align-self: flex-start;
-            background: #f0fdf4;
-            color: #064e3b;
-            border: 1px solid #bbf7d0;
-            border-bottom-left-radius: 4px;
-        }
-
-        .msg-user {
-            align-self: flex-end;
-            background: #2563eb;
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-
-        .msg-author {
-            font-size: 0.75rem;
-            font-weight: 700;
-            margin-bottom: 0.3rem;
-            opacity: 0.8;
-        }
-
-        .msg-play-btn {
-            background: #10b981;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 0.2rem 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 0.5rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-        }
-
-        .suggestion-chips {
-            display: flex;
-            gap: 0.5rem;
-            overflow-x: auto;
-            padding: 0.5rem 1.5rem;
-            background: #fafafa;
-            border-top: 1px solid var(--border);
-        }
-
-        .chip {
-            white-space: nowrap;
-            background: white;
-            border: 1px solid #cbd5e1;
-            border-radius: 999px;
-            padding: 0.4rem 0.8rem;
-            font-size: 0.8rem;
-            color: #334155;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-        .chip:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-            background: var(--primary-light);
-        }
-
-        .chat-input-row {
+        .modal-body { padding: 1.5rem; max-height: 80vh; overflow-y: auto; }
+        .modal-footer {
             padding: 1rem 1.5rem;
             border-top: 1px solid var(--border);
+            background: #f8fafc;
             display: flex;
+            justify-content: flex-end;
             gap: 0.75rem;
         }
 
-        .chat-input {
-            flex: 1;
-            padding: 0.75rem 1.25rem;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            font-size: 0.95rem;
-            outline: none;
-        }
-        .chat-input:focus { border-color: var(--primary); }
-
-        .btn-icon {
-            width: 46px;
-            height: 46px;
-            border-radius: 12px;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-            transition: all 0.2s;
-        }
-
-        .btn-mic { background: #f1f5f9; color: #475569; }
-        .btn-mic.recording { background: #fee2e2; color: #dc2626; animation: pulse 1s infinite; }
-        .btn-send { background: var(--primary); color: white; }
-
-        /* Tables & Lists */
-        .card {
-            background: white;
-            border-radius: 16px;
-            padding: 1.5rem;
-            box-shadow: var(--card-shadow);
-            border: 1px solid var(--border);
-            margin-bottom: 1.5rem;
-        }
-
-        .card h2 { font-size: 1.2rem; margin-bottom: 1rem; color: #1f2937; }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-        }
-
-        th, td {
-            text-align: left;
-            padding: 0.85rem 1rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        th {
-            background: #f8fafc;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        .product-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .product-card {
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1rem;
-            background: #fdfdfd;
+        /* Interactive Playground */
+        .chat-box {
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            height: 520px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: #f8fafc;
+            overflow: hidden;
         }
 
-        .product-card h4 { font-size: 0.95rem; margin-bottom: 0.3rem; }
-        .product-card .price { font-size: 1.1rem; font-weight: 700; color: #059669; }
-        .product-card .unit { font-size: 0.8rem; color: var(--text-muted); }
+        .chat-stream {
+            flex: 1;
+            padding: 1.25rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
 
-        .search-bar {
-            width: 100%;
-            max-width: 400px;
-            padding: 0.65rem 1rem;
-            border: 1px solid var(--border);
-            border-radius: 10px;
+        .chat-bubble {
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: 14px;
             font-size: 0.9rem;
-            margin-bottom: 1rem;
-            outline: none;
+            line-height: 1.5;
+        }
+
+        .bubble-bot {
+            align-self: flex-start;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            color: var(--dark);
+            border-bottom-left-radius: 2px;
+        }
+
+        .bubble-user {
+            align-self: flex-end;
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .bubble-meta {
+            font-size: 0.72rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            opacity: 0.8;
+        }
+
+        .chat-input-row {
+            padding: 0.85rem 1rem;
+            background: white;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Toast Notifications */
+        #toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            background: var(--dark);
+            color: white;
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--radius-md);
+            font-size: 0.88rem;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: slideIn 0.2s ease-out;
+        }
+
+        .toast-success { background: #065f46; border-left: 4px solid #10b981; }
+        .toast-error { background: #7f1d1d; border-left: 4px solid #ef4444; }
+
+        @keyframes slideIn {
+            from { transform: translateX(50px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
     </style>
 </head>
 <body>
 
+    <!-- Top Header -->
     <header>
-        <div class="brand">
-            <div class="brand-logo">DM</div>
-            <div>
-                <h1>DMart Express</h1>
-                <p>Local Voice-AI Telephony System (ಕನ್ನಡ & English)</p>
+        <div class="brand-container">
+            <div class="brand-icon">DM</div>
+            <div class="brand-title">
+                <h1 id="header-store-name">DMart Express</h1>
+                <p>Voice-AI Supermarket & Telephony Management</p>
             </div>
         </div>
-        <div class="system-badges">
-            <span class="badge badge-green"><span class="pulse-dot"></span> Telephony Server: Port 8765</span>
-            <span class="badge badge-blue">Model: <span id="badge-model">gemma3:latest</span></span>
-            <span class="badge badge-amber">Language: Kannada (ಕನ್ನಡ)</span>
+
+        <div class="header-actions">
+            <span class="status-badge badge-live">
+                <span class="badge-pulse"></span>
+                <span>Twilio Live Line Active</span>
+            </span>
+            <button class="btn btn-secondary btn-sm" onclick="refreshAllData()">🔄 Refresh</button>
+            <button class="btn btn-primary btn-sm" onclick="openModal('modal-manual-order')">+ New Order</button>
+            <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-product')">+ Add Product</button>
         </div>
     </header>
 
-    <nav class="tabs">
-        <button class="tab-btn active" onclick="showTab('tab-phone')">📞 Live Phone Simulator</button>
-        <button class="tab-btn" onclick="showTab('tab-products')">🛒 Products Catalog</button>
-        <button class="tab-btn" onclick="showTab('tab-customers')">👥 Customer Registry</button>
-        <button class="tab-btn" onclick="showTab('tab-orders')">📋 Recent Orders</button>
-        <button class="tab-btn" onclick="showTab('tab-telephony')">⚙️ Twilio & Tunnel Setup</button>
+    <!-- Navigation Tabs -->
+    <nav class="nav-bar">
+        <div class="nav-tabs">
+            <button class="nav-btn active" onclick="switchTab('tab-orders')">
+                <span>📋 Live Orders</span>
+                <span class="nav-counter" id="badge-orders-count">0</span>
+            </button>
+            <button class="nav-btn" onclick="switchTab('tab-inventory')">
+                <span>🛒 Catalog & Stock</span>
+                <span class="nav-counter" id="badge-products-count">0</span>
+            </button>
+            <button class="nav-btn" onclick="switchTab('tab-customers')">
+                <span>👥 Customer Registry</span>
+                <span class="nav-counter" id="badge-customers-count">0</span>
+            </button>
+            <button class="nav-btn" onclick="switchTab('tab-settings')">
+                <span>⚙️ Store & AI Settings</span>
+            </button>
+            <button class="nav-btn" onclick="switchTab('tab-calls')">
+                <span>📞 Telephony & Call Logs</span>
+                <span class="nav-counter" id="badge-calls-count">0</span>
+            </button>
+            <button class="nav-btn" onclick="switchTab('tab-playground')">
+                <span>🤖 Priya AI Playground</span>
+            </button>
+        </div>
+
+        <div class="sync-controls">
+            <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                <input type="checkbox" id="auto-refresh-toggle" checked onchange="toggleAutoRefresh(this.checked)">
+                <span>Auto-refresh (10s)</span>
+            </label>
+        </div>
     </nav>
 
+    <!-- Main Content Body -->
     <main>
-        <!-- TAB 1: PHONE SIMULATOR -->
-        <div id="tab-phone" class="tab-pane active">
-            <div class="simulator-grid">
-                <!-- Virtual Handset -->
-                <div class="phone-card">
-                    <div class="phone-header">
-                        <div class="phone-notch"></div>
-                        <h3>Virtual Handset</h3>
-                        <p style="font-size: 0.8rem; color: var(--text-muted);">Simulate an incoming PSTN customer phone call</p>
+        <!-- KPI Overview Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <h3>Today's Revenue</h3>
+                    <div class="kpi-value" id="kpi-revenue">₹ 0.00</div>
+                    <div class="kpi-sub" id="kpi-total-revenue">Total Lifetime: ₹ 0</div>
+                </div>
+                <div class="kpi-icon icon-green">₹</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <h3>Orders Today</h3>
+                    <div class="kpi-value" id="kpi-orders-today">0</div>
+                    <div class="kpi-sub" id="kpi-total-orders">Total Placed: 0</div>
+                </div>
+                <div class="kpi-icon icon-blue">📦</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <h3>Active Customers</h3>
+                    <div class="kpi-value" id="kpi-customers">0</div>
+                    <div class="kpi-sub">Pre-registered Callers</div>
+                </div>
+                <div class="kpi-icon icon-purple">👥</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <h3>Low Stock Alert</h3>
+                    <div class="kpi-value" id="kpi-low-stock">0</div>
+                    <div class="kpi-sub">Items below 10 units</div>
+                </div>
+                <div class="kpi-icon icon-amber">⚠️</div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 1: LIVE ORDERS ================= -->
+        <div id="tab-orders" class="tab-pane active">
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Customer Orders & Dispatch</h2>
+                        <p>Real-time feed of grocery orders placed via phone calls and dashboard</p>
                     </div>
-
-                    <label class="caller-select-label">Choose Caller Profile:</label>
-                    <select id="caller-select" class="phone-input" onchange="onCallerChange()">
-                        <option value="+919876543210">Rahul Sharma (+919876543210) - Registered</option>
-                        <option value="+919812345678">Priya Patel (+919812345678) - Registered</option>
-                        <option value="+919765432100">Ananya Iyer (+919765432100) - Registered</option>
-                        <option value="+919111222333">New Caller (+919111222333) - Unregistered</option>
-                        <option value="custom">Custom Phone Number...</option>
-                    </select>
-
-                    <input type="text" id="custom-phone" class="phone-input" placeholder="+91..." style="display: none;" />
-
-                    <div class="call-controls">
-                        <button id="btn-call" class="btn btn-call" onclick="startCall()">
-                            <span>📞 Call DMart</span>
-                        </button>
-                        <button id="btn-hangup" class="btn btn-hangup" onclick="endCall()">
-                            <span>🔴 End Call</span>
-                        </button>
-                    </div>
-
-                    <div id="call-status" class="call-status-indicator">
-                        Phone Status: Idle (Ready to call)
-                    </div>
-
-                    <div style="margin-top: 1.25rem; font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
-                        <strong>💡 How it works:</strong>
-                        <ul style="padding-left: 1.2rem; margin-top: 0.3rem;">
-                            <li>Registered callers are welcomed by name in Kannada. Address is never re-asked.</li>
-                            <li>Unregistered callers are prompted for their name and delivery address, then auto-registered.</li>
-                            <li>Piper TTS synthesizes Kannada speech directly in your browser.</li>
-                        </ul>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-secondary btn-sm" onclick="loadOrders()">🔄 Refresh Orders</button>
+                        <button class="btn btn-primary btn-sm" onclick="openModal('modal-manual-order')">+ Manual Order</button>
                     </div>
                 </div>
 
-                <!-- Chat & Voice Stream Window -->
-                <div class="chat-container">
-                    <div class="chat-header">
-                        <div>
-                            <h3>Priya (Voice Assistant)</h3>
-                            <span id="call-timer" style="font-size: 0.8rem; color: #059669; font-weight: 600;">Call: Inactive</span>
+                <div class="filter-row">
+                    <input type="text" class="search-input" id="order-search" placeholder="Search by Order ID, Customer, or Phone..." oninput="filterOrdersTable(this.value)">
+                    <div class="filter-pills" id="order-status-pills">
+                        <button class="pill active" onclick="setOrderStatusFilter('')">All Orders</button>
+                        <button class="pill" onclick="setOrderStatusFilter('CONFIRMED')">Confirmed</button>
+                        <button class="pill" onclick="setOrderStatusFilter('PREPARING')">Preparing</button>
+                        <button class="pill" onclick="setOrderStatusFilter('OUT_FOR_DELIVERY')">Out for Delivery</button>
+                        <button class="pill" onclick="setOrderStatusFilter('DELIVERED')">Delivered</button>
+                        <button class="pill" onclick="setOrderStatusFilter('CANCELLED')">Cancelled</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Date & Time</th>
+                                <th>Customer & Phone</th>
+                                <th>Items Ordered</th>
+                                <th>Total (₹)</th>
+                                <th>Delivery ETA</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-tbody">
+                            <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Loading orders...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 2: INVENTORY & CATALOG ================= -->
+        <div id="tab-inventory" class="tab-pane">
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Catalog & Real-Time Stock Management</h2>
+                        <p>Add new products, adjust inventory quantities, and update supermarket prices</p>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-product')">+ Add New Product</button>
+                </div>
+
+                <div class="filter-row">
+                    <input type="text" class="search-input" id="inventory-search" placeholder="Search product name (e.g. Milk, Rice, ಹಾಲು)..." oninput="loadProducts()">
+                    <div class="filter-pills" id="category-pills">
+                        <button class="pill active" onclick="setCategoryFilter('')">All Categories</button>
+                        <button class="pill" onclick="setCategoryFilter('Groceries')">Groceries</button>
+                        <button class="pill" onclick="setCategoryFilter('Dairy')">Dairy</button>
+                        <button class="pill" onclick="setCategoryFilter('Eggs')">Eggs</button>
+                        <button class="pill" onclick="setCategoryFilter('Bakery')">Bakery</button>
+                        <button class="pill" onclick="setCategoryFilter('Snacks')">Snacks</button>
+                        <button class="pill" onclick="setCategoryFilter('Beverages')">Beverages</button>
+                        <button class="pill" onclick="setCategoryFilter('Produce')">Produce</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Product Name</th>
+                                <th>Category</th>
+                                <th>Unit / Pack</th>
+                                <th>Price (₹)</th>
+                                <th>Stock Units</th>
+                                <th>Quick Restock</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-tbody">
+                            <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Loading catalog...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 3: CUSTOMER REGISTRY ================= -->
+        <div id="tab-customers" class="tab-pane">
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Registered Customer Profiles</h2>
+                        <p>Manage pre-registered caller profiles, delivery addresses, and purchase history</p>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('modal-register-customer')">+ Register New Customer</button>
+                </div>
+
+                <div class="filter-row">
+                    <input type="text" class="search-input" id="customer-search" placeholder="Search by phone number, name, or address..." oninput="loadCustomers(this.value)">
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Phone Number</th>
+                                <th>Customer Name</th>
+                                <th>Saved Delivery Address</th>
+                                <th>Registered Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customers-tbody">
+                            <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading customers...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 4: STORE SETTINGS ================= -->
+        <div id="tab-settings" class="tab-pane">
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Store Profile & Voice-AI Settings</h2>
+                        <p>Change your shop name, delivery policies, and spoken assistant greetings</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveStoreSettings()">💾 Save Changes</button>
+                </div>
+
+                <form id="settings-form" onsubmit="event.preventDefault(); saveStoreSettings();">
+                    <h3 style="font-size: 1rem; margin-bottom: 1rem; color: var(--dark);">🏪 Store Profile</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Supermarket / Shop Display Name</label>
+                            <input type="text" class="form-control" id="setting-store-name" placeholder="e.g. D mart Express">
+                            <small style="color: var(--text-muted); font-size: 0.75rem;">This name is spoken by Priya during all customer phone calls.</small>
                         </div>
-                        <button class="chip" onclick="clearChat()">Clear Log</button>
+                        <div class="form-group">
+                            <label class="form-label">Public Store Phone Number</label>
+                            <input type="text" class="form-control" id="setting-store-phone" placeholder="+18554161860">
+                        </div>
                     </div>
 
-                    <div id="chat-messages" class="chat-messages">
-                        <div class="msg-bubble msg-ai" style="align-self: center; text-align: center; background: #f8fafc; border-color: #e2e8f0; color: var(--text-muted);">
-                            Click <strong>"Call DMart"</strong> to initiate the voice AI call session.
+                    <h3 style="font-size: 1rem; margin: 1.5rem 0 1rem; color: var(--dark);">🚚 Delivery & Pricing Policies</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Standard Delivery Fee (₹)</label>
+                            <input type="number" step="0.5" class="form-control" id="setting-delivery-fee" placeholder="30">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Free Delivery Threshold (₹)</label>
+                            <input type="number" step="10" class="form-control" id="setting-free-threshold" placeholder="800">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Default ETA Window (Minutes)</label>
+                            <input type="number" class="form-control" id="setting-default-eta" placeholder="40">
                         </div>
                     </div>
 
-                    <div class="suggestion-chips">
-                        <span class="chip" onclick="sendSuggestion('ಹಾಲು ಮತ್ತು ಬ್ರೆಡ್ ಬೇಕು')">🥛 ಹಾಲು & ಬ್ರೆಡ್</span>
-                        <span class="chip" onclick="sendSuggestion('1 ಲೀಟರ್ ಸೂರ್ಯಕಾಂತಿ ಎಣ್ಣೆ ಮತ್ತು 1 ಕೆಜಿ ಸಕ್ಕರೆ')">🌻 ಎಣ್ಣೆ & ಸಕ್ಕರೆ</span>
-                        <span class="chip" onclick="sendSuggestion('ಚಹಾ ಪುಡಿ ಮತ್ತು ಬಿಸ್ಕತ್ತು')">☕ ಚಹಾ ಪುಡಿ</span>
-                        <span class="chip" onclick="sendSuggestion('ನನ್ನ ಹೆಸರು ರಮೇಶ್, ವಿಳಾಸ #12 ಜಯನಗರ, ಬೆಂಗಳೂರು')">📝 ಹೆಸರು & ವಿಳಾಸ ನೋಂದಣಿ</span>
-                        <span class="chip" onclick="sendSuggestion('ಹೌದು, ದಯವಿಟ್ಟು ಡೆಲಿವರಿ ಕನ್ಫರ್ಮ್ ಮಾಡಿ')">✅ ಆರ್ಡರ್ ಖಚಿತಪಡಿಸಿ</span>
+                    <h3 style="font-size: 1rem; margin: 1.5rem 0 1rem; color: var(--dark);">🗣️ Voice AI Assistant Configuration</h3>
+                    <div class="form-group">
+                        <label class="form-label">Welcome Spoken Greeting Template (Kannada)</label>
+                        <textarea class="form-control" id="setting-welcome-greeting" rows="2"></textarea>
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Use <code>{store_name}</code> as a placeholder for the store name.</small>
+                    </div>
+
+                    <div style="margin-top: 1.5rem;">
+                        <button type="submit" class="btn btn-primary">💾 Save All Store Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ================= TAB 5: TELEPHONY & CALL LOGS ================= -->
+        <div id="tab-calls" class="tab-pane">
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Twilio Telephony & Recent Call History</h2>
+                        <p>Log of actual telephone calls received on your Twilio hotline</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="loadCallLogs()">🔄 Refresh Calls</button>
+                </div>
+
+                <div style="background: #f1f5f9; padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 1.5rem; font-size: 0.85rem;">
+                    <strong>📞 Twilio Webhook URL:</strong>
+                    <code id="webhook-url" style="background: white; padding: 0.2rem 0.5rem; border-radius: 4px; margin: 0 0.5rem;">https://hello-8ct1.onrender.com/voice/incoming</code>
+                    <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('webhook-url').innerText); showToast('Copied to clipboard!')">Copy</button>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Call SID</th>
+                                <th>Date & Time</th>
+                                <th>Caller Number</th>
+                                <th>Customer Name</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                                <th>Order Linked</th>
+                                <th>Summary</th>
+                            </tr>
+                        </thead>
+                        <tbody id="calls-tbody">
+                            <tr><td colspan="8" style="text-align: center; color: var(--text-muted);">Loading call logs...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 6: PRIYA PLAYGROUND ================= -->
+        <div id="tab-playground" class="tab-pane">
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Priya Voice AI Playground</h2>
+                        <p>Interactive web testing interface backed by cloud Gemini API</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                    <label style="font-size: 0.85rem; font-weight: 600;">Test As Caller Profile:</label>
+                    <select id="chat-caller-select" class="form-control" style="width: auto; min-width: 250px;">
+                        <option value="+919008474173">Vedashree (+919008474173)</option>
+                        <option value="+919876543210">Rahul Sharma (+919876543210)</option>
+                        <option value="+919812345678">Priya Patel (+919812345678)</option>
+                        <option value="+919999999999">New Caller (+919999999999)</option>
+                    </select>
+                </div>
+
+                <div class="chat-box">
+                    <div class="chat-stream" id="chat-stream">
+                        <div class="chat-bubble bubble-bot">
+                            <div class="bubble-meta">Priya (AI Assistant)</div>
+                            <div>ನಮಸ್ಕಾರ! DMart Express ಗೆ ಸ್ವಾಗತ. ನಿಮಗೆ ಇಂದು ಯಾವ ದಿನಸಿ ಸಾಮಗ್ರಿಗಳು ಬೇಕು? (Type below to test ordering or searching items in Kannada or English!)</div>
+                        </div>
+                    </div>
+
+                    <div style="padding: 0.5rem 1rem; background: white; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; overflow-x: auto;">
+                        <span class="pill" onclick="sendChatMessage('ಹಾಲು ಮತ್ತು ಬ್ರೆಡ್ ಬೇಕು')">🥛 ಹಾಲು ಮತ್ತು ಬ್ರೆಡ್</span>
+                        <span class="pill" onclick="sendChatMessage('1 ಲೀಟರ್ ಎಣ್ಣೆ ಮತ್ತು 1 ಕೆಜಿ ಸಕ್ಕರೆ')">🌻 ಎಣ್ಣೆ & ಸಕ್ಕರೆ</span>
+                        <span class="pill" onclick="sendChatMessage('ಚಹಾ ಪುಡಿ ಮತ್ತು ಬಿಸ್ಕತ್ತು')">☕ ಚಹಾ & ಬಿಸ್ಕತ್ತು</span>
+                        <span class="pill" onclick="sendChatMessage('ಆರ್ಡರ್ ಕನ್ಫರ್ಮ್ ಮಾಡಿ')">✅ ಆರ್ಡರ್ ಖಚಿತಪಡಿಸಿ</span>
                     </div>
 
                     <div class="chat-input-row">
-                        <input type="text" id="user-input" class="chat-input" placeholder="Type in Kannada or English (e.g. ಹಾಲು ಬೇಕು, 1L oil)..." onkeydown="if(event.key==='Enter') sendTurn()" disabled />
-                        <button id="btn-mic" class="btn-icon btn-mic" onclick="toggleMic()" title="Speak via Microphone" disabled>🎤</button>
-                        <button id="btn-send" class="btn-icon btn-send" onclick="sendTurn()" title="Send Message" disabled>➤</button>
+                        <input type="text" id="chat-user-input" class="form-control" placeholder="Type a message (e.g. 1L amul milk beku)..." onkeydown="if(event.key==='Enter') submitChatMessage()">
+                        <button class="btn btn-primary" onclick="submitChatMessage()">Send ➤</button>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- TAB 2: PRODUCTS CATALOG -->
-        <div id="tab-products" class="tab-pane">
-            <div class="card">
-                <h2>DMart Grocery Catalog & Real-Time Stock</h2>
-                <input type="text" class="search-bar" id="product-search" placeholder="Search catalog (e.g. oil, milk, tea, rice, ಹಾಲು)..." oninput="loadProducts(this.value)" />
-                <div id="products-list" class="product-grid">
-                    <!-- Loaded dynamically -->
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 3: CUSTOMERS -->
-        <div id="tab-customers" class="tab-pane">
-            <div class="card">
-                <h2>Registered Caller Profiles</h2>
-                <table id="customers-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Phone Number</th>
-                            <th>Name</th>
-                            <th>Saved Delivery Address</th>
-                            <th>Registered At</th>
-                        </tr>
-                    </thead>
-                    <tbody id="customers-tbody">
-                        <!-- Loaded dynamically -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- TAB 4: RECENT ORDERS -->
-        <div id="tab-orders" class="tab-pane">
-            <div class="card">
-                <h2>Recent Customer Orders</h2>
-                <div id="orders-list">
-                    <!-- Loaded dynamically -->
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 5: TELEPHONY SETTINGS -->
-        <div id="tab-telephony" class="tab-pane">
-            <div class="card">
-                <h2>Twilio Telephony & Public Tunnel Setup</h2>
-                <p style="margin-bottom: 1rem; color: var(--text-muted); line-height: 1.6;">
-                    To receive real phone calls on your Twilio virtual number, expose this local server to the internet using the bundled <strong>Cloudflare Tunnel</strong> or <strong>ngrok</strong>.
-                </p>
-
-                <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Step 1: Launch Cloudflare Tunnel</h3>
-                <pre style="background: #1e293b; color: #38bdf8; padding: 1rem; border-radius: 8px; overflow-x: auto;">.\cloudflared.exe tunnel --url http://localhost:8765</pre>
-
-                <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Step 2: Configure Twilio Phone Number Webhook</h3>
-                <p style="color: var(--text-muted); margin-bottom: 0.5rem;">In your Twilio Console, set the Voice Webhook for your phone number to:</p>
-                <pre style="background: #1e293b; color: #a7f3d0; padding: 1rem; border-radius: 8px; overflow-x: auto;">https://&lt;GENERATED_CLOUDFLARE_DOMAIN&gt;.trycloudflare.com/voice/incoming  (HTTP POST)</pre>
-
-                <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Or run the automated script:</h3>
-                <pre style="background: #1e293b; color: #fde68a; padding: 1rem; border-radius: 8px; overflow-x: auto;">.venv\Scripts\python.exe scripts/setup_twilio_webhook.py https://&lt;DOMAIN&gt;.trycloudflare.com/voice/incoming</pre>
             </div>
         </div>
     </main>
 
-    <script>
-        let currentCall = null;
-        let callSeconds = 0;
-        let timerInterval = null;
-        let recognition = null;
-        let isRecording = false;
+    <!-- ================= MODALS ================= -->
 
-        function showTab(tabId) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
-            if (tabId === 'tab-products') loadProducts();
-            if (tabId === 'tab-customers') loadCustomers();
-            if (tabId === 'tab-orders') loadOrders();
-        }
-
-        function onCallerChange() {
-            const select = document.getElementById('caller-select');
-            const custom = document.getElementById('custom-phone');
-            custom.style.display = select.value === 'custom' ? 'block' : 'none';
-        }
-
-        function getSelectedPhone() {
-            const select = document.getElementById('caller-select');
-            if (select.value === 'custom') {
-                return document.getElementById('custom-phone').value.trim() || '+919876543210';
-            }
-            return select.value;
-        }
-
-        async function startCall() {
-            const phone = getSelectedPhone();
-            const statusEl = document.getElementById('call-status');
-            statusEl.innerText = "Connecting call to Priya (Voice AI)...";
-            statusEl.className = "call-status-indicator active";
-
-            try {
-                const res = await fetch('/api/simulate/call', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ caller_phone: phone })
-                });
-                const data = await res.json();
-                currentCall = data;
-
-                document.getElementById('btn-call').style.display = 'none';
-                document.getElementById('btn-hangup').style.display = 'inline-flex';
-                document.getElementById('user-input').disabled = false;
-                document.getElementById('btn-mic').disabled = false;
-                document.getElementById('btn-send').disabled = false;
-
-                startTimer();
-                statusEl.innerText = `Connected: ${phone} (${data.customer ? data.customer.name : 'Unregistered'})`;
-
-                // Add Priya greeting to chat
-                addMessage('Priya (DMart AI)', data.greeting_text, 'ai', data.audio_base64);
-                if (data.audio_base64) playBase64Audio(data.audio_base64);
-
-            } catch (err) {
-                alert("Error starting call: " + err);
-                statusEl.innerText = "Failed to connect call.";
-                statusEl.className = "call-status-indicator";
-            }
-        }
-
-        function endCall() {
-            clearInterval(timerInterval);
-            callSeconds = 0;
-            document.getElementById('call-timer').innerText = "Call: Inactive";
-            document.getElementById('btn-call').style.display = 'inline-flex';
-            document.getElementById('btn-hangup').style.display = 'none';
-            document.getElementById('user-input').disabled = true;
-            document.getElementById('btn-mic').disabled = true;
-            document.getElementById('btn-send').disabled = true;
-
-            const statusEl = document.getElementById('call-status');
-            statusEl.innerText = "Call ended.";
-            statusEl.className = "call-status-indicator";
-            currentCall = null;
-        }
-
-        function startTimer() {
-            callSeconds = 0;
-            clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                callSeconds++;
-                const mins = Math.floor(callSeconds / 60).toString().padStart(2, '0');
-                const secs = (callSeconds % 60).toString().padStart(2, '0');
-                document.getElementById('call-timer').innerText = `Live Call: ${mins}:${secs}`;
-            }, 1000);
-        }
-
-        async function sendTurn(textOverride) {
-            const input = document.getElementById('user-input');
-            const text = (textOverride || input.value).trim();
-            if (!text || !currentCall) return;
-            input.value = '';
-
-            addMessage('You (Caller)', text, 'user');
-
-            try {
-                const res = await fetch('/api/simulate/turn', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        caller_phone: currentCall.caller_phone,
-                        text: text
-                    })
-                });
-                const data = await res.json();
-                addMessage('Priya (DMart AI)', data.reply_text, 'ai', data.audio_base64);
-                if (data.audio_base64) playBase64Audio(data.audio_base64);
-            } catch (err) {
-                addMessage('System', 'Error executing turn: ' + err, 'ai');
-            }
-        }
-
-        function sendSuggestion(text) {
-            if (!currentCall) {
-                alert("Please click 'Call DMart' first to initiate the call session.");
-                return;
-            }
-            sendTurn(text);
-        }
-
-        function addMessage(author, text, type, audioB64) {
-            const container = document.getElementById('chat-messages');
-            const bubble = document.createElement('div');
-            bubble.className = `msg-bubble msg-${type}`;
-
-            let playHtml = '';
-            if (audioB64) {
-                playHtml = `<br><button class="msg-play-btn" onclick="playBase64Audio('${audioB64}')">🔊 Replay Audio</button>`;
-            }
-
-            bubble.innerHTML = `
-                <div class="msg-author">${author}</div>
-                <div>${text}</div>
-                ${playHtml}
-            `;
-            container.appendChild(bubble);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function playBase64Audio(base64Wav) {
-            try {
-                const snd = new Audio("data:audio/wav;base64," + base64Wav);
-                snd.play();
-            } catch (e) {
-                console.error("Audio playback error:", e);
-            }
-        }
-
-        function clearChat() {
-            document.getElementById('chat-messages').innerHTML = '';
-        }
-
-        // Web Speech API for Mic input
-        function toggleMic() {
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                alert("Speech recognition is not supported in this browser. Please use Chrome/Edge or type your response.");
-                return;
-            }
-
-            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-            const micBtn = document.getElementById('btn-mic');
-
-            if (isRecording) {
-                recognition.stop();
-                return;
-            }
-
-            recognition = new SpeechRec();
-            recognition.lang = 'kn-IN'; // Kannada (India)
-            recognition.interimResults = false;
-
-            recognition.onstart = () => {
-                isRecording = true;
-                micBtn.classList.add('recording');
-            };
-
-            recognition.onresult = (event) => {
-                const speechResult = event.results[0][0].transcript;
-                document.getElementById('user-input').value = speechResult;
-                sendTurn(speechResult);
-            };
-
-            recognition.onerror = (e) => {
-                console.error("Speech error", e);
-                isRecording = false;
-                micBtn.classList.remove('recording');
-            };
-
-            recognition.onend = () => {
-                isRecording = false;
-                micBtn.classList.remove('recording');
-            };
-
-            recognition.start();
-        }
-
-        // Load Products
-        async function loadProducts(query = '') {
-            const res = await fetch('/api/products?query=' + encodeURIComponent(query));
-            const data = await res.json();
-            const list = document.getElementById('products-list');
-            list.innerHTML = (data.products || []).map(p => `
-                <div class="product-card">
-                    <div>
-                        <span class="badge badge-green" style="margin-bottom: 0.5rem;">${p.category}</span>
-                        <h4>${p.name}</h4>
-                        <div class="unit">${p.unit} • Stock: ${p.stock_quantity}</div>
+    <!-- Modal: Add / Edit Product -->
+    <div class="modal-overlay" id="modal-product">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-product-title">Add New Product</h3>
+                <button class="modal-close" onclick="closeModal('modal-product')">&times;</button>
+            </div>
+            <form id="form-product" onsubmit="event.preventDefault(); submitProductForm();">
+                <input type="hidden" id="prod-id" value="">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Product Name *</label>
+                        <input type="text" class="form-control" id="prod-name" required placeholder="e.g. Nandini Toned Milk 1L">
                     </div>
-                    <div style="margin-top: 0.75rem;">
-                        <span class="price">₹${p.price.toFixed(2)}</span>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Category *</label>
+                            <select class="form-control" id="prod-category" required>
+                                <option value="Groceries">Groceries</option>
+                                <option value="Dairy">Dairy</option>
+                                <option value="Eggs">Eggs</option>
+                                <option value="Bakery">Bakery</option>
+                                <option value="Snacks">Snacks</option>
+                                <option value="Beverages">Beverages</option>
+                                <option value="Produce">Produce</option>
+                                <option value="Household">Household</option>
+                                <option value="Personal Care">Personal Care</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Unit / Packaging *</label>
+                            <input type="text" class="form-control" id="prod-unit" required placeholder="e.g. 1 Liter, 500g">
+                        </div>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Price in Rupees (₹) *</label>
+                            <input type="number" step="0.5" class="form-control" id="prod-price" required placeholder="54.0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Stock Quantity *</label>
+                            <input type="number" class="form-control" id="prod-stock" required placeholder="50">
+                        </div>
                     </div>
                 </div>
-            `).join('');
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-product')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-product">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Register / Edit Customer -->
+    <div class="modal-overlay" id="modal-customer">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-customer-title">Register New Customer</h3>
+                <button class="modal-close" onclick="closeModal('modal-customer')">&times;</button>
+            </div>
+            <form id="form-customer" onsubmit="event.preventDefault(); submitCustomerForm();">
+                <input type="hidden" id="cust-id" value="">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Phone Number *</label>
+                        <input type="text" class="form-control" id="cust-phone" required placeholder="+919876543210 or 9876543210">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Indian 10-digit mobile number with or without +91 prefix.</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Customer Full Name *</label>
+                        <input type="text" class="form-control" id="cust-name" required placeholder="e.g. Ramesh Kumar">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Saved Delivery Address *</label>
+                        <textarea class="form-control" id="cust-address" required placeholder="Flat #, Building, Street, Area, Bengaluru"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-customer')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Customer Past Orders -->
+    <div class="modal-overlay" id="modal-customer-orders">
+        <div class="modal" style="max-width: 650px;">
+            <div class="modal-header">
+                <h3 id="modal-cust-orders-title">Customer Order History</h3>
+                <button class="modal-close" onclick="closeModal('modal-customer-orders')">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-cust-orders-body">
+                Loading orders...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-customer-orders')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Order Details Invoice -->
+    <div class="modal-overlay" id="modal-order-details">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 id="modal-order-id">Order Details</h3>
+                <button class="modal-close" onclick="closeModal('modal-order-details')">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-order-body">
+                Loading...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger btn-sm" id="btn-modal-cancel-order" onclick="cancelCurrentOrder()">Cancel Order & Restock</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('modal-order-details')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Create Manual Order -->
+    <div class="modal-overlay" id="modal-manual-order">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>Place Manual Walk-in / Phone Order</h3>
+                <button class="modal-close" onclick="closeModal('modal-manual-order')">&times;</button>
+            </div>
+            <form id="form-manual-order" onsubmit="event.preventDefault(); submitManualOrder();">
+                <div class="modal-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Customer Phone *</label>
+                            <input type="text" class="form-control" id="manual-phone" required placeholder="+919876543210" onblur="autofillCustomer(this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Customer Name</label>
+                            <input type="text" class="form-control" id="manual-name" placeholder="Customer Name">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Delivery Address</label>
+                        <input type="text" class="form-control" id="manual-address" placeholder="Address or Leave empty for Pickup">
+                    </div>
+
+                    <div style="border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 0.5rem;">
+                        <label class="form-label">Select Items & Quantities</label>
+                        <div id="manual-order-items-list" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
+                            <div class="order-item-row" style="display: flex; gap: 0.5rem;">
+                                <select class="form-control manual-item-select" required style="flex: 2;"></select>
+                                <input type="number" min="1" value="1" class="form-control manual-item-qty" style="flex: 1;" placeholder="Qty">
+                                <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="addManualOrderItemRow()">+ Add Another Item</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-manual-order')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Place Order Now</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <!-- Dashboard JavaScript Logic -->
+    <script>
+        let allProducts = [];
+        let allOrders = [];
+        let currentOrderFilter = '';
+        let currentCategoryFilter = '';
+        let autoRefreshTimer = null;
+        let selectedOrderId = null;
+
+        // On document load
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshAllData();
+            startAutoRefresh();
+            // Set webhook url dynamically based on current host
+            const host = window.location.host;
+            const proto = window.location.protocol;
+            document.getElementById('webhook-url').innerText = `${proto}//${host}/voice/incoming`;
+        });
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `<span>${type === 'success' ? '✓' : '⚠️'}</span> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
         }
 
-        // Load Customers
-        async function loadCustomers() {
-            const res = await fetch('/api/customers');
-            const data = await res.json();
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+
+            if (tabId === 'tab-orders') loadOrders();
+            if (tabId === 'tab-inventory') loadProducts();
+            if (tabId === 'tab-customers') loadCustomers();
+            if (tabId === 'tab-settings') loadSettings();
+            if (tabId === 'tab-calls') loadCallLogs();
+        }
+
+        async function refreshAllData() {
+            await Promise.all([
+                loadStats(),
+                loadOrders(),
+                loadProducts(),
+                loadCustomers(),
+                loadSettings(),
+                loadCallLogs()
+            ]);
+        }
+
+        function toggleAutoRefresh(enable) {
+            if (enable) startAutoRefresh();
+            else clearInterval(autoRefreshTimer);
+        }
+
+        function startAutoRefresh() {
+            clearInterval(autoRefreshTimer);
+            autoRefreshTimer = setInterval(() => {
+                loadStats();
+                loadOrders();
+            }, 10000); // 10 seconds
+        }
+
+        // ================= 1. DASHBOARD STATS =================
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/dashboard/stats');
+                const data = await res.json();
+                document.getElementById('kpi-revenue').innerText = `₹ ${data.revenue_today.toFixed(2)}`;
+                document.getElementById('kpi-total-revenue').innerText = `Total Lifetime: ₹ ${data.total_revenue.toFixed(2)}`;
+                document.getElementById('kpi-orders-today').innerText = data.orders_today;
+                document.getElementById('kpi-total-orders').innerText = `Total Placed: ${data.total_orders}`;
+                document.getElementById('kpi-customers').innerText = data.total_customers;
+                document.getElementById('kpi-low-stock').innerText = data.low_stock_count;
+
+                document.getElementById('badge-orders-count').innerText = data.total_orders;
+                document.getElementById('badge-products-count').innerText = data.total_products;
+                document.getElementById('badge-customers-count').innerText = data.total_customers;
+            } catch (err) {
+                console.error("Stats load error:", err);
+            }
+        }
+
+        // ================= 2. ORDERS MANAGEMENT =================
+        async function loadOrders() {
+            try {
+                const url = currentOrderFilter ? `/api/orders?status=${encodeURIComponent(currentOrderFilter)}` : '/api/orders';
+                const res = await fetch(url);
+                const data = await res.json();
+                allOrders = data.orders || [];
+                renderOrdersTable(allOrders);
+            } catch (err) {
+                console.error("Orders load error:", err);
+            }
+        }
+
+        function setOrderStatusFilter(status) {
+            currentOrderFilter = status;
+            document.querySelectorAll('#order-status-pills .pill').forEach(p => p.classList.remove('active'));
+            event.target.classList.add('active');
+            loadOrders();
+        }
+
+        function filterOrdersTable(term) {
+            const clean = term.toLowerCase().trim();
+            if (!clean) return renderOrdersTable(allOrders);
+            const filtered = allOrders.filter(o => 
+                o.order_id.toLowerCase().includes(clean) ||
+                o.customer_name.toLowerCase().includes(clean) ||
+                o.customer_phone.includes(clean)
+            );
+            renderOrdersTable(filtered);
+        }
+
+        function renderOrdersTable(orders) {
+            const tbody = document.getElementById('orders-tbody');
+            if (!orders.length) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">No orders found.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = orders.map(o => {
+                const itemsSummary = (o.items || []).map(i => `${i.product_name} (${i.quantity}x)`).join(', ');
+                const statusTag = `tag-${o.status.toLowerCase().replace(/_/g, '')}`;
+                return `
+                    <tr>
+                        <td><strong>${o.order_id}</strong></td>
+                        <td style="font-size: 0.8rem; color: var(--text-muted);">${o.created_at || 'Just now'}</td>
+                        <td>
+                            <strong>${o.customer_name}</strong><br>
+                            <span style="font-size: 0.78rem; color: var(--text-muted);">${o.customer_phone}</span>
+                        </td>
+                        <td style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${itemsSummary}">
+                            ${itemsSummary || 'N/A'}
+                        </td>
+                        <td><strong>₹ ${o.total_amount.toFixed(2)}</strong></td>
+                        <td style="font-size: 0.8rem;">${o.estimated_delivery_time || '35-45 mins'}</td>
+                        <td>
+                            <select class="form-control" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; width: auto;" onchange="updateOrderStatus('${o.order_id}', this.value)">
+                                <option value="CONFIRMED" ${o.status === 'CONFIRMED' ? 'selected' : ''}>CONFIRMED</option>
+                                <option value="PREPARING" ${o.status === 'PREPARING' ? 'selected' : ''}>PREPARING</option>
+                                <option value="OUT_FOR_DELIVERY" ${o.status === 'OUT_FOR_DELIVERY' ? 'selected' : ''}>OUT FOR DELIVERY</option>
+                                <option value="DELIVERED" ${o.status === 'DELIVERED' ? 'selected' : ''}>DELIVERED</option>
+                                <option value="CANCELLED" ${o.status === 'CANCELLED' ? 'selected' : ''}>CANCELLED</option>
+                            </select>
+                        </td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm" onclick="viewOrderDetails('${o.order_id}')">Details</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function updateOrderStatus(orderId, newStatus) {
+            try {
+                const res = await fetch(`/api/orders/${orderId}/status`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ status: newStatus })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Order ${orderId} updated to ${newStatus}`);
+                    loadOrders();
+                    loadStats();
+                } else {
+                    showToast(data.error || "Failed to update status", "error");
+                }
+            } catch (err) {
+                showToast("Network error updating status", "error");
+            }
+        }
+
+        async function viewOrderDetails(orderId) {
+            selectedOrderId = orderId;
+            try {
+                const res = await fetch(`/api/orders/${orderId}`);
+                const data = await res.json();
+                if (!data.found) return showToast("Order not found", "error");
+
+                document.getElementById('modal-order-id').innerText = `Order: ${data.order_id}`;
+                const itemsHtml = (data.items || []).map(i => `
+                    <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border);">
+                        <span>${i.product_name} x ${i.quantity}</span>
+                        <span>₹ ${i.subtotal.toFixed(2)}</span>
+                    </div>
+                `).join('');
+
+                document.getElementById('modal-order-body').innerHTML = `
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Customer:</strong> ${data.customer_name} (${data.customer_phone})<br>
+                        <strong>Delivery Address:</strong> ${data.delivery_address || 'Store Pickup'}<br>
+                        <strong>ETA:</strong> ${data.estimated_delivery_time || 'N/A'}<br>
+                        <strong>Status:</strong> <span class="tag tag-${data.status.toLowerCase()}">${data.status}</span>
+                    </div>
+                    <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-sm); margin-bottom: 1rem;">
+                        <h4 style="font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase;">Line Items</h4>
+                        ${itemsHtml}
+                        <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.05rem; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 2px solid var(--border);">
+                            <span>Total Bill:</span>
+                            <span>₹ ${data.total_amount.toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+
+                openModal('modal-order-details');
+            } catch (err) {
+                showToast("Error loading order details", "error");
+            }
+        }
+
+        async function cancelCurrentOrder() {
+            if (!selectedOrderId || !confirm(`Cancel order ${selectedOrderId} and return all items to stock?`)) return;
+            try {
+                const res = await fetch(`/api/orders/${selectedOrderId}/cancel`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message);
+                    closeModal('modal-order-details');
+                    loadOrders();
+                    loadStats();
+                    loadProducts();
+                } else {
+                    showToast(data.error || "Failed to cancel order", "error");
+                }
+            } catch (err) {
+                showToast("Error cancelling order", "error");
+            }
+        }
+
+        // ================= 3. INVENTORY & PRODUCTS =================
+        async function loadProducts() {
+            const query = document.getElementById('inventory-search') ? document.getElementById('inventory-search').value : '';
+            try {
+                const url = `/api/products?query=${encodeURIComponent(query)}&category=${encodeURIComponent(currentCategoryFilter)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                allProducts = data.products || [];
+                renderProductsTable(allProducts);
+                populateManualOrderSelect(allProducts);
+            } catch (err) {
+                console.error("Products load error:", err);
+            }
+        }
+
+        function setCategoryFilter(category) {
+            currentCategoryFilter = category;
+            document.querySelectorAll('#category-pills .pill').forEach(p => p.classList.remove('active'));
+            event.target.classList.add('active');
+            loadProducts();
+        }
+
+        function renderProductsTable(products) {
+            const tbody = document.getElementById('products-tbody');
+            if (!products.length) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">No products found.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = products.map(p => {
+                const stockBadge = p.stock_quantity <= 0 
+                    ? `<span class="tag tag-cancelled">Out of Stock (0)</span>` 
+                    : (p.stock_quantity <= 10 
+                        ? `<span class="tag tag-preparing">Low Stock (${p.stock_quantity})</span>` 
+                        : `<span class="tag tag-confirmed">${p.stock_quantity} in stock</span>`);
+
+                return `
+                    <tr>
+                        <td>${p.id}</td>
+                        <td><strong>${p.name}</strong></td>
+                        <td><span class="pill" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">${p.category}</span></td>
+                        <td>${p.unit}</td>
+                        <td><strong>₹ ${p.price.toFixed(2)}</strong></td>
+                        <td>${stockBadge}</td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm" onclick="adjustProductStock(${p.id}, 10)">+10</button>
+                            <button class="btn btn-secondary btn-sm" onclick="adjustProductStock(${p.id}, 50)">+50</button>
+                        </td>
+                        <td>
+                            <button class="btn btn-secondary btn-sm" onclick="openEditProduct(${p.id})">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteProduct(${p.id}, '${p.name.replace(/'/g, "\\'")}')">✕</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function adjustProductStock(prodId, delta) {
+            try {
+                const res = await fetch(`/api/products/${prodId}/stock`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ delta: delta })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Updated stock for ${data.name} to ${data.new_stock}`);
+                    loadProducts();
+                    loadStats();
+                }
+            } catch (err) {
+                showToast("Error updating stock", "error");
+            }
+        }
+
+        function openEditProduct(prodId) {
+            const p = allProducts.find(x => x.id === prodId);
+            if (!p) return;
+            document.getElementById('modal-product-title').innerText = "Edit Product";
+            document.getElementById('prod-id').value = p.id;
+            document.getElementById('prod-name').value = p.name;
+            document.getElementById('prod-category').value = p.category;
+            document.getElementById('prod-unit').value = p.unit;
+            document.getElementById('prod-price').value = p.price;
+            document.getElementById('prod-stock').value = p.stock_quantity;
+            openModal('modal-product');
+        }
+
+        async function submitProductForm() {
+            const id = document.getElementById('prod-id').value;
+            const payload = {
+                name: document.getElementById('prod-name').value,
+                category: document.getElementById('prod-category').value,
+                unit: document.getElementById('prod-unit').value,
+                price: parseFloat(document.getElementById('prod-price').value),
+                stock_quantity: parseInt(document.getElementById('prod-stock').value)
+            };
+
+            const url = id ? `/api/products/${id}` : '/api/products';
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message);
+                    closeModal('modal-product');
+                    loadProducts();
+                    loadStats();
+                } else {
+                    showToast(data.error || "Failed to save product", "error");
+                }
+            } catch (err) {
+                showToast("Error saving product", "error");
+            }
+        }
+
+        async function deleteProduct(prodId, prodName) {
+            if (!confirm(`Are you sure you want to delete '${prodName}' from the catalog?`)) return;
+            try {
+                const res = await fetch(`/api/products/${prodId}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message);
+                    loadProducts();
+                    loadStats();
+                } else {
+                    showToast(data.error || "Failed to delete product", "error");
+                }
+            } catch (err) {
+                showToast("Error deleting product", "error");
+            }
+        }
+
+        // ================= 4. CUSTOMER MANAGEMENT =================
+        let allCustomers = [];
+        async function loadCustomers(query = '') {
+            try {
+                const res = await fetch(`/api/customers?query=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                allCustomers = data.customers || [];
+                renderCustomersTable(allCustomers);
+            } catch (err) {
+                console.error("Customers load error:", err);
+            }
+        }
+
+        function renderCustomersTable(customers) {
             const tbody = document.getElementById('customers-tbody');
-            tbody.innerHTML = (data.customers || []).map(c => `
+            if (!customers.length) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">No registered customers found.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = customers.map(c => `
                 <tr>
                     <td>${c.id}</td>
                     <td><strong>${c.phone_number}</strong></td>
                     <td>${c.name}</td>
                     <td>${c.address}</td>
-                    <td>${c.created_at}</td>
+                    <td style="font-size: 0.8rem; color: var(--text-muted);">${c.created_at || 'Registered'}</td>
+                    <td>
+                        <button class="btn btn-secondary btn-sm" onclick="openEditCustomer(${c.id})">Edit</button>
+                        <button class="btn btn-secondary btn-sm" onclick="viewCustomerOrders(${c.id}, '${c.name.replace(/'/g, "\\'")}')">Orders</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteCustomer(${c.id}, '${c.name.replace(/'/g, "\\'")}')">✕</button>
+                    </td>
                 </tr>
             `).join('');
         }
 
-        // Load Orders
-        async function loadOrders() {
-            const res = await fetch('/api/orders');
-            const data = await res.json();
-            const list = document.getElementById('orders-list');
-            if (!data.orders || data.orders.length === 0) {
-                list.innerHTML = '<p style="color: var(--text-muted);">No orders found.</p>';
-                return;
+        function openEditCustomer(custId) {
+            const c = allCustomers.find(x => x.id === custId);
+            if (!c) return;
+            document.getElementById('modal-customer-title').innerText = "Edit Customer Profile";
+            document.getElementById('cust-id').value = c.id;
+            document.getElementById('cust-phone').value = c.phone_number;
+            document.getElementById('cust-name').value = c.name;
+            document.getElementById('cust-address').value = c.address;
+            openModal('modal-customer');
+        }
+
+        async function submitCustomerForm() {
+            const id = document.getElementById('cust-id').value;
+            const payload = {
+                phone: document.getElementById('cust-phone').value,
+                name: document.getElementById('cust-name').value,
+                address: document.getElementById('cust-address').value
+            };
+
+            const url = id ? `/api/customers/${id}` : '/api/customers';
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message || "Customer saved successfully!");
+                    closeModal('modal-customer');
+                    loadCustomers();
+                    loadStats();
+                } else {
+                    showToast(data.error || "Failed to save customer", "error");
+                }
+            } catch (err) {
+                showToast("Error saving customer", "error");
             }
-            list.innerHTML = data.orders.map(o => `
-                <div style="border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; background: #fafafa;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <strong>Order ID: ${o.order_id}</strong>
-                        <span class="badge ${o.status === 'CONFIRMED' ? 'badge-green' : 'badge-amber'}">${o.status}</span>
-                    </div>
-                    <div style="font-size: 0.9rem; color: #334155; margin-bottom: 0.5rem;">
-                        Customer: <strong>${o.customer_name}</strong> (${o.customer_phone}) • Total: <strong>₹${o.total_amount}</strong>
-                    </div>
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-                        Delivery: ${o.delivery_address || 'Store Pickup'} • ETA: ${o.estimated_delivery_time || 'N/A'}
-                    </div>
-                    <div style="font-size: 0.85rem; background: white; padding: 0.5rem; border-radius: 6px; border: 1px solid #e2e8f0;">
-                        Items: ${(o.items || []).map(i => `${i.product_name} (${i.quantity}x)`).join(', ')}
-                    </div>
-                </div>
-            `).join('');
+        }
+
+        async function deleteCustomer(custId, custName) {
+            if (!confirm(`Delete profile for ${custName}?`)) return;
+            try {
+                const res = await fetch(`/api/customers/${custId}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message);
+                    loadCustomers();
+                    loadStats();
+                } else {
+                    showToast(data.error || "Failed to delete customer", "error");
+                }
+            } catch (err) {
+                showToast("Error deleting customer", "error");
+            }
+        }
+
+        async function viewCustomerOrders(custId, custName) {
+            try {
+                const res = await fetch(`/api/customers/${custId}/orders`);
+                const data = await res.json();
+                document.getElementById('modal-cust-orders-title').innerText = `Orders for ${custName}`;
+                const container = document.getElementById('modal-cust-orders-body');
+                
+                if (!data.orders || !data.orders.length) {
+                    container.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 1.5rem;">No previous orders found for this customer.</p>`;
+                } else {
+                    container.innerHTML = data.orders.map(o => `
+                        <div style="border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.85rem; margin-bottom: 0.75rem; background: #f8fafc;">
+                            <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                                <span>${o.order_id}</span>
+                                <span>₹ ${o.total_amount.toFixed(2)} (${o.status})</span>
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">${o.created_at || ''}</div>
+                            <div style="font-size: 0.85rem; margin-top: 0.4rem;">
+                                ${(o.items || []).map(i => `${i.product_name} (${i.quantity}x)`).join(', ')}
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                openModal('modal-customer-orders');
+            } catch (err) {
+                showToast("Error loading customer orders", "error");
+            }
+        }
+
+        // ================= 5. STORE SETTINGS =================
+        async function loadSettings() {
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                const s = data.settings || {};
+                
+                document.getElementById('header-store-name').innerText = s.store_name || 'DMart Express';
+                document.getElementById('setting-store-name').value = s.store_name || '';
+                document.getElementById('setting-store-phone').value = s.store_phone || '';
+                document.getElementById('setting-delivery-fee').value = s.delivery_fee || '30';
+                document.getElementById('setting-free-threshold').value = s.free_delivery_threshold || '800';
+                document.getElementById('setting-default-eta').value = s.default_eta_minutes || '40';
+                document.getElementById('setting-welcome-greeting').value = s.welcome_greeting || '';
+            } catch (err) {
+                console.error("Settings load error:", err);
+            }
+        }
+
+        async function saveStoreSettings() {
+            const updates = {
+                store_name: document.getElementById('setting-store-name').value,
+                store_phone: document.getElementById('setting-store-phone').value,
+                delivery_fee: document.getElementById('setting-delivery-fee').value,
+                free_delivery_threshold: document.getElementById('setting-free-threshold').value,
+                default_eta_minutes: document.getElementById('setting-default-eta').value,
+                welcome_greeting: document.getElementById('setting-welcome-greeting').value
+            };
+
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(updates)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast("Store settings saved! Spoken AI greeting updated.");
+                    loadSettings();
+                }
+            } catch (err) {
+                showToast("Error saving store settings", "error");
+            }
+        }
+
+        // ================= 6. CALL LOGS =================
+        async function loadCallLogs() {
+            try {
+                const res = await fetch('/api/calls');
+                const data = await res.json();
+                const tbody = document.getElementById('calls-tbody');
+                document.getElementById('badge-calls-count').innerText = (data.calls || []).length;
+                if (!data.calls || !data.calls.length) {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">No telephony calls recorded yet.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = data.calls.map(c => `
+                    <tr>
+                        <td><code>${c.call_sid}</code></td>
+                        <td style="font-size: 0.8rem; color: var(--text-muted);">${c.created_at || 'N/A'}</td>
+                        <td><strong>${c.caller_phone}</strong></td>
+                        <td>${c.customer_name || 'Caller'}</td>
+                        <td>${c.duration_seconds}s</td>
+                        <td><span class="tag tag-${c.call_status.toLowerCase()}">${c.call_status}</span></td>
+                        <td>${c.order_id ? `<strong>${c.order_id}</strong>` : '—'}</td>
+                        <td style="font-size: 0.8rem; color: var(--text-muted);">${c.summary || 'Completed'}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error("Call logs error:", err);
+            }
+        }
+
+        // ================= 7. MANUAL ORDER MODAL =================
+        function populateManualOrderSelect(products) {
+            document.querySelectorAll('.manual-item-select').forEach(sel => {
+                const currentVal = sel.value;
+                sel.innerHTML = `<option value="">-- Choose Product --</option>` + products.map(p => `
+                    <option value="${p.name}">${p.name} (₹${p.price})</option>
+                `).join('');
+                if (currentVal) sel.value = currentVal;
+            });
+        }
+
+        function addManualOrderItemRow() {
+            const container = document.getElementById('manual-order-items-list');
+            const row = document.createElement('div');
+            row.className = 'order-item-row';
+            row.style.cssText = 'display: flex; gap: 0.5rem;';
+            row.innerHTML = `
+                <select class="form-control manual-item-select" required style="flex: 2;"></select>
+                <input type="number" min="1" value="1" class="form-control manual-item-qty" style="flex: 1;" placeholder="Qty">
+                <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>
+            `;
+            container.appendChild(row);
+            populateManualOrderSelect(allProducts);
+        }
+
+        function autofillCustomer(phone) {
+            const clean = phone.trim();
+            if (!clean) return;
+            const match = allCustomers.find(c => c.phone_number.includes(clean) || clean.includes(c.phone_number));
+            if (match) {
+                document.getElementById('manual-name').value = match.name;
+                document.getElementById('manual-address').value = match.address;
+            }
+        }
+
+        async function submitManualOrder() {
+            const phone = document.getElementById('manual-phone').value;
+            const name = document.getElementById('manual-name').value;
+            const address = document.getElementById('manual-address').value;
+
+            const items = [];
+            document.querySelectorAll('.order-item-row').forEach(row => {
+                const pName = row.querySelector('.manual-item-select').value;
+                const qty = parseInt(row.querySelector('.manual-item-qty').value) || 1;
+                if (pName) items.push({ name: pName, quantity: qty });
+            });
+
+            if (!items.length) return showToast("Please add at least one product", "error");
+
+            try {
+                const res = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        customer_phone: phone,
+                        customer_name: name || "Customer",
+                        delivery_type: address ? "delivery" : "pickup",
+                        delivery_address: address,
+                        items: items
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Order ${data.order_id} placed successfully!`);
+                    closeModal('modal-manual-order');
+                    loadOrders();
+                    loadStats();
+                    loadProducts();
+                } else {
+                    showToast(data.error || "Failed to place order", "error");
+                }
+            } catch (err) {
+                showToast("Error creating order", "error");
+            }
+        }
+
+        // ================= 8. PRIYA PLAYGROUND =================
+        async function submitChatMessage() {
+            const input = document.getElementById('chat-user-input');
+            const msg = input.value.trim();
+            if (!msg) return;
+            input.value = '';
+            await sendChatMessage(msg);
+        }
+
+        async function sendChatMessage(msg) {
+            const phone = document.getElementById('chat-caller-select').value;
+            const stream = document.getElementById('chat-stream');
+
+            // Append user bubble
+            const uBubble = document.createElement('div');
+            uBubble.className = 'chat-bubble bubble-user';
+            uBubble.innerHTML = `<div class="bubble-meta">You</div><div>${msg}</div>`;
+            stream.appendChild(uBubble);
+            stream.scrollTop = stream.scrollHeight;
+
+            // Send to test turn
+            try {
+                const res = await fetch('/api/test/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ caller_phone: phone, message: msg })
+                });
+                const data = await res.json();
+                
+                const bBubble = document.createElement('div');
+                bBubble.className = 'chat-bubble bubble-bot';
+                let toolsHtml = '';
+                if (data.tools && data.tools.length) {
+                    toolsHtml = `<div style="font-size: 0.75rem; background: #e2e8f0; padding: 0.3rem 0.6rem; border-radius: 4px; margin-bottom: 0.4rem;">🛠️ Tools Executed: ${data.tools.map(t => t.name).join(', ')}</div>`;
+                }
+                bBubble.innerHTML = `<div class="bubble-meta">Priya</div>${toolsHtml}<div>${data.reply || 'No response'}</div>`;
+                stream.appendChild(bBubble);
+                stream.scrollTop = stream.scrollHeight;
+
+                // If an order or customer change happened, refresh data
+                if (data.tools && data.tools.some(t => t.name === 'place_order' || t.name === 'register_caller')) {
+                    loadOrders();
+                    loadCustomers();
+                    loadStats();
+                }
+            } catch (err) {
+                const errBubble = document.createElement('div');
+                errBubble.className = 'chat-bubble bubble-bot';
+                errBubble.innerHTML = `<div class="bubble-meta">Error</div><div>Network error: ${err}</div>`;
+                stream.appendChild(errBubble);
+            }
+        }
+
+        // Modal Helpers
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            if (id === 'modal-product') {
+                document.getElementById('form-product').reset();
+                document.getElementById('prod-id').value = '';
+                document.getElementById('modal-product-title').innerText = "Add New Product";
+            }
+            if (id === 'modal-customer') {
+                document.getElementById('form-customer').reset();
+                document.getElementById('cust-id').value = '';
+                document.getElementById('modal-customer-title').innerText = "Register New Customer";
+            }
         }
     </script>
 </body>

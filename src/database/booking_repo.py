@@ -114,8 +114,14 @@ SEMANTIC_SYNONYMS = {
     "vim": ["vim", "dishwash"]
 }
 
-def calculate_dynamic_eta(minutes: int = 40) -> str:
+def calculate_dynamic_eta(minutes: Optional[int] = None) -> str:
     """Calculates a realistic delivery ETA window based on current time."""
+    if minutes is None:
+        try:
+            from src.database.settings_repo import get_setting
+            minutes = int(get_setting("default_eta_minutes", "40"))
+        except Exception:
+            minutes = 40
     now = datetime.datetime.now()
     arrival_time = now + datetime.timedelta(minutes=minutes)
     time_str = arrival_time.strftime("%I:%M %p").lstrip("0")
@@ -130,19 +136,33 @@ STOP_WORDS = {
     "nanage", "beku", "dayavittu", "matthu", "ondu", "eradu", "kodi"
 }
 
-def search_products(query: str = "") -> List[Dict[str, Any]]:
+def search_products(query: str = "", category: str = "", low_stock_only: bool = False, limit: int = 50) -> List[Dict[str, Any]]:
     """
     Search products using exact words, category match, and semantic grocery synonyms.
+    Supports dashboard filtering by category and low stock.
     """
     with get_db_cursor() as cursor:
         clean_q = query.strip().lower()
+        clean_cat = category.strip()
+        
+        # If no query but category or low stock specified
         if not clean_q:
-            cursor.execute("""
+            where_clauses = []
+            params = []
+            if clean_cat:
+                where_clauses.append("LOWER(category) = LOWER(?)")
+                params.append(clean_cat)
+            if low_stock_only:
+                where_clauses.append("stock_quantity <= 10")
+            
+            where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+            cursor.execute(f"""
                 SELECT id, name, category, price, unit, stock_quantity 
                 FROM products 
-                WHERE stock_quantity > 0 
-                LIMIT 15
-            """)
+                {where_sql}
+                ORDER BY id DESC
+                LIMIT ?
+            """, params + [limit])
             return [dict(row) for row in cursor.fetchall()]
 
         # 1. Check for specific synonym triggers in query
@@ -338,13 +358,23 @@ def create_store_order(
             })
             
         # Step 2: Apply Delivery Fee Logic
+        try:
+            from src.database.settings_repo import get_setting
+            free_threshold = float(get_setting("free_delivery_threshold", "800.0"))
+            base_fee = float(get_setting("delivery_fee", "30.0"))
+            eta_mins = int(get_setting("default_eta_minutes", "40"))
+        except Exception:
+            free_threshold = settings.FREE_DELIVERY_THRESHOLD
+            base_fee = settings.DELIVERY_FEE
+            eta_mins = 40
+
         delivery_fee = 0.0
         if delivery_type.lower() == "delivery":
-            delivery_fee = 0.0 if subtotal >= settings.FREE_DELIVERY_THRESHOLD else settings.DELIVERY_FEE
+            delivery_fee = 0.0 if subtotal >= free_threshold else base_fee
         
         total_amount = subtotal + delivery_fee
         order_id = f"DMART-{uuid.uuid4().hex[:4].upper()}"
-        estimated_delivery_time = calculate_dynamic_eta(35)
+        estimated_delivery_time = calculate_dynamic_eta(eta_mins)
         
         # Step 3: Insert Order
         cursor.execute("""
@@ -379,6 +409,8 @@ def create_store_order(
             "estimated_delivery_time": estimated_delivery_time,
             "status": "CONFIRMED"
         }
+
+place_order = create_store_order
 
 def get_order_details(order_id: str) -> Dict[str, Any]:
     """Retrieve full details of an existing order."""
@@ -415,13 +447,184 @@ def cancel_order(order_id: str) -> Dict[str, Any]:
         cursor.execute("UPDATE orders SET status = 'CANCELLED' WHERE order_id = ?", (order_id.strip().upper(),))
         return {"success": True, "message": f"Order {order_id} has been cancelled and items returned to stock."}
 
-def list_recent_orders(limit: int = 20) -> List[Dict[str, Any]]:
-    """Retrieve recent orders with their line items."""
+def list_recent_orders(limit: int = 50, status_filter: str = "") -> List[Dict[str, Any]]:
+    """Retrieve recent orders with optional status filter and line items."""
     with get_db_cursor() as cursor:
-        cursor.execute("SELECT * FROM orders ORDER BY id DESC LIMIT ?", (limit,))
+        if status_filter:
+            cursor.execute("SELECT * FROM orders WHERE status = ? ORDER BY id DESC LIMIT ?", (status_filter.strip().upper(), limit))
+        else:
+            cursor.execute("SELECT * FROM orders ORDER BY id DESC LIMIT ?", (limit,))
         orders = [dict(r) for r in cursor.fetchall()]
         for o in orders:
             cursor.execute("SELECT product_name, quantity, unit_price, subtotal FROM order_items WHERE order_id = ?", (o["order_id"],))
             o["items"] = [dict(r) for r in cursor.fetchall()]
         return orders
+
+def add_product(name: str, category: str, price: float, unit: str, stock_quantity: int = 50) -> Dict[str, Any]:
+    """Adds a new product to the catalog."""
+    clean_name = name.strip()
+    clean_cat = category.strip() or "Groceries"
+    clean_unit = unit.strip() or "1 packet"
+    
+    if not clean_name:
+        return {"success": False, "error": "Product name cannot be empty."}
+    if float(price) < 0:
+        return {"success": False, "error": "Price must be greater than or equal to 0."}
+        
+    with get_db_cursor() as cursor:
+        cursor.execute("SELECT id FROM products WHERE LOWER(name) = LOWER(?)", (clean_name,))
+        if cursor.fetchone():
+            return {"success": False, "error": f"Product '{clean_name}' already exists in catalog."}
+            
+        cursor.execute("""
+            INSERT INTO products (name, category, price, unit, stock_quantity)
+            VALUES (?, ?, ?, ?, ?)
+        """, (clean_name, clean_cat, float(price), clean_unit, int(stock_quantity)))
+        new_id = cursor.lastrowid
+        
+    logger.info(f"Added new product ID {new_id}: '{clean_name}' (Rs. {price})")
+    return {
+        "success": True,
+        "message": f"Product '{clean_name}' added successfully.",
+        "product": {
+            "id": new_id,
+            "name": clean_name,
+            "category": clean_cat,
+            "price": float(price),
+            "unit": clean_unit,
+            "stock_quantity": int(stock_quantity)
+        }
+    }
+
+def update_product(product_id: int, name: str, category: str, price: float, unit: str, stock_quantity: int) -> Dict[str, Any]:
+    """Updates an existing product in the catalog."""
+    clean_name = name.strip()
+    clean_cat = category.strip() or "Groceries"
+    clean_unit = unit.strip() or "1 packet"
+    
+    if not clean_name:
+        return {"success": False, "error": "Product name cannot be empty."}
+    if float(price) < 0:
+        return {"success": False, "error": "Price must be non-negative."}
+        
+    with get_db_cursor() as cursor:
+        cursor.execute("SELECT id FROM products WHERE id = ?", (product_id,))
+        if not cursor.fetchone():
+            return {"success": False, "error": f"Product ID {product_id} not found."}
+            
+        cursor.execute("""
+            UPDATE products
+            SET name = ?, category = ?, price = ?, unit = ?, stock_quantity = ?
+            WHERE id = ?
+        """, (clean_name, clean_cat, float(price), clean_unit, int(stock_quantity), product_id))
+        
+    logger.info(f"Updated product ID {product_id}: '{clean_name}'")
+    return {
+        "success": True,
+        "message": f"Product '{clean_name}' updated successfully.",
+        "product": {
+            "id": product_id,
+            "name": clean_name,
+            "category": clean_cat,
+            "price": float(price),
+            "unit": clean_unit,
+            "stock_quantity": int(stock_quantity)
+        }
+    }
+
+def delete_product(product_id: int) -> Dict[str, Any]:
+    """Deletes a product from the catalog."""
+    with get_db_cursor() as cursor:
+        cursor.execute("SELECT name FROM products WHERE id = ?", (product_id,))
+        row = cursor.fetchone()
+        if not row:
+            return {"success": False, "error": f"Product ID {product_id} not found."}
+        p_name = row["name"]
+        cursor.execute("DELETE FROM products WHERE id = ?", (product_id,))
+        
+    logger.info(f"Deleted product ID {product_id}: '{p_name}'")
+    return {"success": True, "message": f"Product '{p_name}' deleted successfully."}
+
+def update_product_stock(product_id: int, delta: int) -> Dict[str, Any]:
+    """Adjusts stock quantity by delta (positive or negative)."""
+    with get_db_cursor() as cursor:
+        cursor.execute("SELECT name, stock_quantity FROM products WHERE id = ?", (product_id,))
+        row = cursor.fetchone()
+        if not row:
+            return {"success": False, "error": f"Product ID {product_id} not found."}
+        new_stock = max(0, row["stock_quantity"] + int(delta))
+        cursor.execute("UPDATE products SET stock_quantity = ? WHERE id = ?", (new_stock, product_id))
+        
+    return {"success": True, "new_stock": new_stock, "name": row["name"]}
+
+def update_order_status(order_id: str, new_status: str) -> Dict[str, Any]:
+    """Updates order status and manages inventory restoration if cancelled."""
+    valid_statuses = ["CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"]
+    status_upper = new_status.strip().upper()
+    if status_upper not in valid_statuses:
+        return {"success": False, "error": f"Invalid status '{new_status}'. Allowed: {', '.join(valid_statuses)}"}
+        
+    with get_db_cursor() as cursor:
+        cursor.execute("SELECT status FROM orders WHERE order_id = ?", (order_id.strip().upper(),))
+        order = cursor.fetchone()
+        if not order:
+            return {"success": False, "error": f"Order {order_id} not found."}
+            
+        old_status = order["status"]
+        if old_status == status_upper:
+            return {"success": True, "message": f"Order status is already {status_upper}."}
+            
+        # If moving to CANCELLED from non-cancelled, restore stock
+        if status_upper == "CANCELLED" and old_status != "CANCELLED":
+            cursor.execute("SELECT product_id, quantity FROM order_items WHERE order_id = ?", (order_id.strip().upper(),))
+            items = cursor.fetchall()
+            for it in items:
+                cursor.execute("UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?", (it["quantity"], it["product_id"]))
+                
+        # If reviving from CANCELLED to active, deduct stock
+        elif old_status == "CANCELLED" and status_upper != "CANCELLED":
+            cursor.execute("SELECT product_id, quantity FROM order_items WHERE order_id = ?", (order_id.strip().upper(),))
+            items = cursor.fetchall()
+            for it in items:
+                cursor.execute("UPDATE products SET stock_quantity = MAX(0, stock_quantity - ?) WHERE id = ?", (it["quantity"], it["product_id"]))
+                
+        cursor.execute("UPDATE orders SET status = ? WHERE order_id = ?", (status_upper, order_id.strip().upper()))
+        
+    logger.info(f"Order {order_id} status changed: {old_status} -> {status_upper}")
+    return {"success": True, "order_id": order_id, "previous_status": old_status, "status": status_upper}
+
+def get_dashboard_stats() -> Dict[str, Any]:
+    """Aggregates real-time store metrics for the overview dashboard."""
+    with get_db_cursor() as cursor:
+        # Total customers
+        cursor.execute("SELECT COUNT(*) as count FROM customers")
+        total_customers = cursor.fetchone()["count"]
+        
+        # Products & low stock
+        cursor.execute("SELECT COUNT(*) as total, SUM(CASE WHEN stock_quantity <= 10 THEN 1 ELSE 0 END) as low_stock FROM products")
+        p_row = cursor.fetchone()
+        total_products = p_row["total"] or 0
+        low_stock_count = p_row["low_stock"] or 0
+        
+        # Total orders & revenue today
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_orders,
+                SUM(CASE WHEN date(created_at) = date('now') THEN 1 ELSE 0 END) as orders_today,
+                SUM(CASE WHEN date(created_at) = date('now') AND status != 'CANCELLED' THEN total_amount ELSE 0.0 END) as revenue_today,
+                SUM(CASE WHEN status != 'CANCELLED' THEN total_amount ELSE 0.0 END) as total_revenue
+            FROM orders
+        """)
+        o_row = cursor.fetchone()
+        
+        return {
+            "total_customers": total_customers,
+            "total_products": total_products,
+            "low_stock_count": low_stock_count,
+            "orders_today": o_row["orders_today"] or 0,
+            "revenue_today": round(o_row["revenue_today"] or 0.0, 2),
+            "total_orders": o_row["total_orders"] or 0,
+            "total_revenue": round(o_row["total_revenue"] or 0.0, 2)
+        }
+
 

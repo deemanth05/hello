@@ -59,6 +59,7 @@ async def health():
     store_name = get_setting("store_name", settings.STORE_NAME)
     return {
         "status": "healthy",
+        "version": "2.5.1",
         "store": store_name,
         "model": "gemini-2.5-flash-native-audio-latest" if settings.GEMINI_API_KEY else settings.OLLAMA_MODEL
     }

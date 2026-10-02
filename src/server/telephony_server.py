@@ -329,6 +329,14 @@ async def voice_incoming(request: Request):
     
     logger.info(f"Incoming call {call_sid} from {caller}. Connecting to stream: {stream_url}")
     
+    if call_sid:
+        try:
+            from src.database.call_log_repo import log_call_start
+            cust = get_customer(caller)
+            log_call_start(call_sid=call_sid, caller_phone=caller, customer_name=cust['name'] if cust else "Caller")
+        except Exception as err:
+            logger.error(f"Error logging incoming call start: {err}")
+    
     twiml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Connect>

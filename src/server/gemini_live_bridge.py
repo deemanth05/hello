@@ -6,6 +6,7 @@ import time
 import numpy as np
 from typing import Optional
 from loguru import logger
+from fastapi import WebSocketDisconnect
 from google import genai
 from google.genai import types
 
@@ -133,12 +134,13 @@ def pcm24k_to_mulaw8k(pcm24k_bytes: bytes) -> bytes:
     downsampled_float = pcm16.reshape(-1, 3).mean(axis=1).astype(np.float32) / 32768.0
     return encode_mulaw(downsampled_float)
 
-async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: str):
+async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: str, call_sid: Optional[str] = None):
     """
     Pure Speech-to-Speech bi-directional bridge between Twilio and Gemini 2.5 Flash Native Audio.
     No local models, zero STT/TTS latency conflict, sub-500ms turnaround, jitter-compensated streaming.
     """
-    logger.info(f"[Gemini Live] Starting native speech session for {caller_phone} (SID: {stream_sid})")
+    actual_call_sid = call_sid or stream_sid or f"CALL-{int(time.time())}"
+    logger.info(f"[Gemini Live] Starting native speech session for {caller_phone} (SID: {stream_sid}, CallSID: {actual_call_sid})")
     api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
     if not api_key:
         logger.error("GEMINI_API_KEY not configured!")
@@ -187,7 +189,10 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
     from src.database.call_log_repo import log_call_start, log_call_end
     store_name = get_setting("store_name", settings.STORE_NAME)
     created_order_id = None
-    log_call_start(call_sid=call_sid or stream_sid, caller_phone=caller_phone, customer_name=cust['name'] if cust else "Caller")
+    try:
+        log_call_start(call_sid=actual_call_sid, caller_phone=caller_phone, customer_name=cust['name'] if cust else "Caller")
+    except Exception as log_err:
+        logger.error(f"Error logging call start: {log_err}")
 
     is_greeting_playing = True
 
@@ -465,7 +470,7 @@ async def handle_gemini_live_session(websocket, stream_sid: str, caller_phone: s
         try:
             duration = int(time.perf_counter() - stream_start_time)
             log_call_end(
-                call_sid=call_sid or stream_sid,
+                call_sid=actual_call_sid,
                 status="COMPLETED",
                 duration_seconds=duration,
                 order_id=created_order_id,

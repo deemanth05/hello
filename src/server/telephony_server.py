@@ -301,6 +301,9 @@ async def api_simulate_turn(data: dict):
 
 
 @app.api_route("/voice/incoming", methods=["GET", "POST"])
+@app.api_route("/voice", methods=["GET", "POST"])
+@app.api_route("/twiml", methods=["GET", "POST"])
+@app.api_route("/incoming", methods=["GET", "POST"])
 async def voice_incoming(request: Request):
     """
     Twilio Voice webhook for incoming calls.
@@ -330,12 +333,15 @@ async def voice_incoming(request: Request):
     <Connect>
         <Stream url="{stream_url}">
             <Parameter name="caller" value="{caller}" />
+            <Parameter name="call_sid" value="{call_sid}" />
         </Stream>
     </Connect>
 </Response>"""
     return Response(content=twiml_response, media_type="text/xml")
 
 @app.websocket("/voice/stream")
+@app.websocket("/ws/telephony")
+@app.websocket("/stream")
 async def voice_stream_endpoint(websocket: WebSocket):
     """
     Bi-directional Twilio Media Stream WebSocket:
@@ -412,16 +418,20 @@ async def voice_stream_endpoint(websocket: WebSocket):
                 stream_sid = data.get("streamSid") or start_info.get("streamSid")
                 custom_params = start_info.get("customParameters", {})
                 caller_phone = custom_params.get("caller", caller_phone)
+                call_sid = custom_params.get("call_sid") or start_info.get("callSid") or stream_sid
                 stream_start_time = asyncio.get_event_loop().time()
                 
-                logger.info(f"Stream Started: SID={stream_sid}, Caller={caller_phone}")
+                logger.info(f"Stream Started: SID={stream_sid}, CallSID={call_sid}, Caller={caller_phone}")
                 
                 # Check for Gemini 2.5 Multimodal Live Speech-to-Speech engine
                 if settings.GEMINI_API_KEY:
                     logger.info(f"Handing off call for {caller_phone} to Gemini 2.5 Multimodal Live Speech-to-Speech engine!")
                     from src.server.gemini_live_bridge import handle_gemini_live_session
-                    await handle_gemini_live_session(websocket, stream_sid, caller_phone)
-                    return
+                    try:
+                        await handle_gemini_live_session(websocket, stream_sid, caller_phone, call_sid=call_sid)
+                        return
+                    except Exception as live_err:
+                        logger.error(f"Gemini Live session error: {live_err}, falling back to local voice pipeline...", exc_info=True)
 
                 # Local Fallback Mode: lazily initialize local pipeline
                 from src.pipeline.bot_pipeline import VoiceBotPipeline
